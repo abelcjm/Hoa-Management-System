@@ -1,0 +1,173 @@
+﻿@{
+    Layout = null;
+    ViewData["Title"] = "Login";
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login - HOA Management System</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+
+    <style>
+        body {
+            /* Teal Gradient Background */
+            background: linear-gradient(135deg, #0f766e 0%, #2dd4bf 100%);
+            min-height: 100vh; /* Changed from height to min-height for mobile scrolling */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px; /* Ensures the card never touches the screen edges */
+        }
+
+        .login-card {
+            background-color: white;
+            border-radius: 15px;
+            padding: 40px;
+            width: 100%;
+            max-width: 450px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+
+        /* Logo Styling */
+        .logo-container img {
+            width: 120px;
+            height: 120px;
+            object-fit: contain;
+            margin-bottom: 15px;
+            border-radius: 50%;
+            transition: 0.3s;
+        }
+
+        .system-title {
+            color: #0f766e;
+            font-weight: 700;
+            margin-bottom: 30px;
+            transition: 0.3s;
+        }
+
+        .sub-title {
+            color: #6c757d;
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .form-control {
+            border-radius: 8px;
+            padding: 12px;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+        }
+
+            .form-control:focus {
+                border-color: #0f766e;
+                box-shadow: 0 0 0 0.2rem rgba(15, 118, 110, 0.15);
+            }
+
+        .btn-login {
+            background-color: #0f766e;
+            color: white;
+            border-radius: 8px;
+            padding: 12px;
+            font-weight: 600;
+            width: 100%;
+            transition: 0.3s;
+            border: none;
+        }
+
+            .btn-login:hover {
+                background-color: #0d5f58;
+                color: white;
+            }
+
+        .forgot-link {
+            color: #6c757d;
+            text-decoration: none;
+            font-size: 0.9rem;
+            margin-top: 20px;
+            display: block;
+        }
+
+            .forgot-link:hover {
+                color: #0f766e;
+            }
+
+        /* --- MOBILE RESPONSIVENESS FIXES --- */
+        @@media (max-width: 576px) {
+            .login-card {
+                padding: 30px 20px; /* Reduces inner padding to give inputs more room */
+            }
+
+            .logo-container img {
+                width: 90px; /* Shrinks logo slightly */
+                height: 90px;
+            }
+
+            .system-title {
+                font-size: 1.4rem; /* Shrinks the main header so it doesn't wrap awkwardly */
+                margin-bottom: 20px;
+            }
+
+            .sub-title {
+                font-size: 0.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="login-card">
+
+        <div class="logo-container">
+            <img src="~/images/logo.png" alt="San Isidro Heights Logo" />
+        </div>
+
+        <div class="mb-4">
+            <div class="sub-title">San Isidro Heights Phase 1</div>
+            <h3 class="system-title">HOA Management System</h3>
+        </div>
+
+        @if (ViewBag.Error != null)
+        {
+            <div class="alert alert-danger text-start small py-2 mb-3 border-0 bg-danger-subtle text-danger">
+                <i class="fa-solid fa-circle-exclamation me-1"></i> @ViewBag.Error
+            </div>
+        }
+
+        <form asp-action="Login" method="post">
+
+            <div class="mb-3 text-start">
+                <label class="form-label small text-muted fw-bold">Username or Email</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0 text-secondary"><i class="fa-solid fa-user"></i></span>
+                    <input type="text" name="loginInput" class="form-control border-start-0" placeholder="Enter username" required />
+                </div>
+            </div>
+
+            <div class="mb-4 text-start">
+                <label class="form-label small text-muted fw-bold">Password</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0 text-secondary"><i class="fa-solid fa-lock"></i></span>
+                    <input type="password" name="password" class="form-control border-start-0" placeholder="Enter password" required />
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-login shadow-sm">
+                Sign In
+            </button>
+        </form>
+
+        <a href="#" class="forgot-link">Forgot Password? Contact Admin.</a>
+    </div>
+
+</body>
+</html>

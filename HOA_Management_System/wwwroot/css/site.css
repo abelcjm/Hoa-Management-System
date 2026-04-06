@@ -1,0 +1,130 @@
+/* Color Variables based on your design */
+:root {
+    --hoa-green: #00695c; /* Teal/Green from your screenshot */
+    --hoa-dark: #004d40;
+    --hoa-light: #e0f2f1;
+    --sidebar-width: 250px;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f3f4f6; /* Light gray background */
+    overflow-x: hidden;
+}
+
+/* SIDEBAR STYLES */
+.sidebar {
+    height: 100vh;
+    width: var(--sidebar-width);
+    position: fixed;
+    top: 0;
+    left: 0;
+    background-color: var(--hoa-green);
+    color: white;
+    padding-top: 20px;
+    z-index: 1000;
+    transition: all 0.3s;
+}
+
+.sidebar-brand {
+    padding: 15px 25px;
+    font-size: 1.2rem;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    margin-bottom: 20px;
+}
+
+.sidebar a {
+    padding: 15px 25px;
+    text-decoration: none;
+    font-size: 1rem;
+    color: rgba(255,255,255,0.8);
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    transition: 0.2s;
+}
+
+    .sidebar a:hover, .sidebar a.active {
+        color: white;
+        background-color: var(--hoa-dark);
+        border-left: 4px solid #b2dfdb;
+    }
+
+/* MAIN CONTENT AREA */
+.main-content {
+    margin-left: var(--sidebar-width);
+    padding: 20px;
+    transition: all 0.3s;
+}
+
+/* TOP BAR */
+.top-bar {
+    background-color: white;
+    padding: 15px 30px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.user-profile {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.btn-logout {
+    border: 1px solid #dee2e6;
+    background: white;
+    color: #333;
+    padding: 5px 15px;
+    border-radius: 5px;
+    text-decoration: none;
+    font-size: 0.9rem;
+}
+
+/* CARD & TABLE STYLES */
+.card-box {
+    background: white;
+    border-radius: 10px;
+    padding: 25px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.search-container {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.table-custom th {
+    border-top: none;
+    color: #6c757d;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.table-custom td {
+    vertical-align: middle;
+    padding: 15px 10px;
+}
+
+.badge-balance {
+    color: #dc3545; /* Red for debt */
+    font-weight: bold;
+}
+
+.badge-paid {
+    color: #198754; /* Green for paid */
+    font-weight: bold;
+}

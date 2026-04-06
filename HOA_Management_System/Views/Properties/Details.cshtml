@@ -1,0 +1,929 @@
+﻿@using Microsoft.AspNetCore.Http
+@model HOA_Management_System.Models.Property
+
+@{
+    ViewData["Title"] = $"Block {Model.Block} Lot {Model.Lot}";
+
+    // --- SETUP PAGINATION VARIABLES ---
+    int pageSize = 15;
+    int vPage = ViewBag.VehiclePage ?? 1;
+    int cPage = ViewBag.CertPage ?? 1;
+    int tPage = ViewBag.TransPage ?? 1;
+    int dPage = ViewBag.DuePage ?? 1;
+    int tenPage = ViewBag.TenantPage ?? 1;
+
+    var userRole = Context.Session.GetString("Role");
+    bool canEdit = userRole == "Admin" || userRole == "Encoder";
+
+    var member = Model.Memberships.FirstOrDefault(m => m.IsCurrentOwner) ?? new HOA_Management_System.Models.Membership { PropertyId = Model.PropertyId };
+
+    // --- DASHBOARD CALCULATIONS ---
+    var currentYear = DateTime.Now.Year;
+
+    var totalPaidThisYear = Model.Transactions
+        .Where(t => t.PaymentDate.Year == currentYear && t.PaymentType == "Monthly Dues")
+        .Sum(t => t.Amount);
+
+    var totalOutstanding = Model.MonthlyDues
+        .Sum(d => d.AmountDue - (d.TotalPaid ?? 0));
+
+    // --- STANDING CALCULATION ---
+    var delinqHistory = ViewBag.DelinquencyHistories as List<HOA_Management_System.Models.DelinquencyHistory> ?? new List<HOA_Management_System.Models.DelinquencyHistory>();
+    string standingBadge = "bg-success";
+    string standingText = "Excellent Standing";
+
+    if (delinqHistory.Any(dh => dh.DateResolved == null))
+    {
+        standingBadge = "bg-danger";
+        standingText = "Currently Delinquent";
+    }
+    else if (delinqHistory.Any())
+    {
+        standingBadge = "bg-warning text-dark";
+        standingText = "Past Delinquencies";
+    }
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <h4 class="m-0 text-success fw-bold">Block @Model.Block - Lot @Model.Lot</h4>
+            <span class="badge @standingBadge"><i class="fa-solid fa-scale-balanced me-1"></i> @standingText</span>
+        </div>
+        <span class="badge bg-secondary">@Model.Status</span>
+    </div>
+    <a asp-action="Index" class="btn btn-outline-secondary">Back to List</a>
+</div>
+
+<ul class="nav nav-tabs mb-4" id="propertyTabs" role="tablist">
+    <li class="nav-item">
+        <button class="nav-link @(ViewBag.ActiveTab == "home" ? "active" : "")"
+                id="home-tab" data-bs-toggle="tab" data-bs-target="#home" type="button">
+            Membership
+        </button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link @(ViewBag.ActiveTab == "vehicle" ? "active" : "")"
+                id="vehicle-tab" data-bs-toggle="tab" data-bs-target="#vehicle" type="button">
+            Vehicles
+        </button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link @(ViewBag.ActiveTab == "tenant" ? "active" : "")"
+                id="tenant-tab" data-bs-toggle="tab" data-bs-target="#tenant" type="button">
+            Tenants
+        </button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link @(ViewBag.ActiveTab == "cert" ? "active" : "")"
+                id="cert-tab" data-bs-toggle="tab" data-bs-target="#cert" type="button">
+            Certifications
+        </button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link @(ViewBag.ActiveTab == "payment" ? "active" : "") fw-bold text-dark"
+                id="payment-tab" data-bs-toggle="tab" data-bs-target="#payment" type="button">
+            Payment History
+        </button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link @(ViewBag.ActiveTab == "finance" ? "active" : "") text-danger"
+                id="finance-tab" data-bs-toggle="tab" data-bs-target="#finance" type="button">
+            Unpaid Bills
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content card-box">
+
+    <div class="tab-pane fade @(ViewBag.ActiveTab == "home" ? "show active" : "")" id="home">
+        <form asp-action="UpdateHomeowner" method="post">
+            <fieldset disabled="@(!canEdit ? "disabled" : null)">
+                <input type="hidden" name="MembershipId" value="@member.MembershipId" />
+                <input type="hidden" name="PropertyId" value="@Model.PropertyId" />
+
+                <h6 class="text-success fw-bold mb-3 border-bottom pb-2">Personal Information</h6>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <label class="form-label small text-muted">Last Name</label>
+                        <input type="text" class="form-control" name="LastName" value="@member.LastName" required placeholder="N/A" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small text-muted">First Name</label>
+                        <input type="text" class="form-control" name="FirstName" value="@member.FirstName" required placeholder="N/A" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small text-muted">Middle Name</label>
+                        <input type="text" class="form-control" name="MiddleName" value="@member.MiddleName" placeholder="N/A" />
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label small text-muted">Civil Status</label>
+                        <select class="form-select" name="CivilStatus">
+                            <option value="" selected="@(member.CivilStatus == null)">N/A</option>
+                            <option value="Single" selected="@(member.CivilStatus == "Single")">Single</option>
+                            <option value="Married" selected="@(member.CivilStatus == "Married")">Married</option>
+                            <option value="Widowed" selected="@(member.CivilStatus == "Widowed")">Widowed</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small text-muted">Sex</label>
+                        <select class="form-select" name="Sex">
+                            <option value="" selected="@(member.Sex == null)">N/A</option>
+                            <option value="Male" selected="@(member.Sex == "Male")">Male</option>
+                            <option value="Female" selected="@(member.Sex == "Female")">Female</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small text-muted">Birth Date</label>
+                        <input type="date" class="form-control" name="DateOfBirth" value="@(member.DateOfBirth?.ToString("yyyy-MM-dd"))" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small text-muted">Spouse Name</label>
+                        <input type="text" class="form-control" name="SpouseName" value="@member.SpouseName" placeholder="N/A" />
+                    </div>
+                </div>
+
+                <h6 class="text-success fw-bold mb-3 border-bottom pb-2">Contact & Census Data</h6>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <label class="form-label small text-muted">Contact Number</label>
+                        <input type="text" class="form-control" name="ContactNumber" value="@member.ContactNumber" required placeholder="N/A" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small text-muted">Email Address</label>
+                        <input type="email" class="form-control" name="EmailAddress" value="@member.EmailAddress" placeholder="N/A" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small text-muted">Years Stay</label>
+                        <input type="number" class="form-control" name="YearsStay" value="@member.YearsStay" placeholder="0" />
+                    </div>
+                    <div class="col-md-2 pt-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="IsVoter" value="true" @(member.IsVoter ? "checked" : "") />
+                            <label class="form-check-label">Registered Voter?</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-4 p-3 bg-light rounded mx-1">
+                    <div class="col-md-2">
+                        <label class="small fw-bold">Seniors</label>
+                        <input type="number" class="form-control form-control-sm" name="CountSeniors" value="@member.CountSeniors" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="small fw-bold">Children</label>
+                        <input type="number" class="form-control form-control-sm" name="CountChildren" value="@member.CountChildren" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="small fw-bold">Helpers</label>
+                        <input type="number" class="form-control form-control-sm" name="CountHelpers" value="@member.CountHelpers" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="small fw-bold">Others</label>
+                        <input type="number" class="form-control form-control-sm" name="CountOthers" value="@member.CountOthers" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="small fw-bold">Total Members (Auto-Calc)</label>
+                        <input type="number" class="form-control form-control-sm bg-white" readonly
+                               value="@(member.CountSeniors + member.CountChildren + member.CountHelpers + member.CountOthers)" />
+                    </div>
+                </div>
+            </fieldset>
+
+            @if (canEdit)
+            {
+                <div class="text-end">
+                    <button type="submit" class="btn btn-success px-4">
+                        <i class="fa-solid fa-floppy-disk me-2"></i> Save Homeowner Details
+                    </button>
+                </div>
+            }
+        </form>
+
+        @if (delinqHistory.Any())
+        {
+            <div class="mt-5 border-top pt-4">
+                <h6 class="text-danger fw-bold mb-3"><i class="fa-solid fa-triangle-exclamation me-2"></i>Delinquency Records (Current Owner)</h6>
+                <table class="table table-sm table-bordered">
+                    <thead class="table-light text-muted small">
+                        <tr>
+                            <th>Date Declared</th>
+                            <th>Date Resolved</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var record in delinqHistory)
+                        {
+                            <tr>
+                                <td>@record.DateDeclared.ToString("MMM dd, yyyy")</td>
+                                <td>@(record.DateResolved?.ToString("MMM dd, yyyy") ?? "---")</td>
+                                <td class="fw-bold">
+                                    @if (record.DateResolved == null)
+                                    {
+                                        <span class="text-danger">Unresolved</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-success">Cleared</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+
+        <div class="mt-5 border-top pt-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="text-secondary fw-bold m-0"><i class="fa-solid fa-clock-rotate-left me-2"></i>Ownership History</h6>
+
+                @if (canEdit)
+                {
+                    <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#transferModal">
+                        <i class="fa-solid fa-right-left me-1"></i> Transfer Property
+                    </button>
+                }
+            </div>
+
+            <table class="table table-sm table-hover align-middle">
+                <thead class="table-light text-muted small">
+                    <tr>
+                        <th>Name</th>
+                        <th>Contact</th>
+                        <th>Move-In Date</th>
+                        <th>Move-Out Date</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var pastOwner in Model.Memberships.OrderByDescending(m => m.IsCurrentOwner).ThenByDescending(m => m.MoveOutDate))
+                    {
+                        <tr>
+                            <td class="fw-bold">@pastOwner.FirstName @pastOwner.LastName</td>
+                            <td>@(string.IsNullOrEmpty(pastOwner.ContactNumber) ? "N/A" : pastOwner.ContactNumber)</td>
+                            <td>@(pastOwner.MoveInDate?.ToString("MMM dd, yyyy") ?? "Unknown")</td>
+                            <td>@(pastOwner.MoveOutDate?.ToString("MMM dd, yyyy") ?? "---")</td>
+                            <td>
+                                @if (pastOwner.IsCurrentOwner)
+                                {
+                                    <span class="badge bg-success">Current</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">Previous</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="tab-pane fade @(ViewBag.ActiveTab == "vehicle" ? "show active" : "")" id="vehicle">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Plate Number</th>
+                    <th>Type</th>
+                    <th>Make / Model / Color</th>
+                    <th>Owner / Driver</th>
+                    <th>Sticker Info</th>
+                    @if (canEdit)
+                    {
+                        <th class="text-end">Action</th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @{
+                    var sortedVehicles = Model.Vehicles.OrderByDescending(v => v.StickerYear);
+                }
+                @foreach (var car in sortedVehicles.Skip((vPage - 1) * pageSize).Take(pageSize))
+                {
+                    <tr>
+                        <td class="fw-bold text-dark">@car.PlateNumber</td>
+                        <td>@car.VehicleType</td>
+                        <td>
+                            @(car.Make ?? "N/A") <br />
+                            <small class="text-muted">@(car.Model ?? "") - @(car.Color ?? "")</small>
+                        </td>
+                        <td>
+                            @(car.VehicleOwner ?? "N/A") <br />
+                            <small class="text-muted">Driver: @(car.DriverName ?? "N/A")</small>
+                        </td>
+                        <td>
+                            <span class="badge bg-success">@car.StickerYear</span>
+                            <div class="small fw-bold text-dark mt-1">
+                                #@(car.StickerNumber ?? "---")
+                            </div>
+                        </td>
+
+                        @if (canEdit)
+                        {
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-link text-success" data-bs-toggle="modal" data-bs-target="#editVehicleModal-@car.VehicleId">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                </button>
+                            </td>
+                        }
+                    </tr>
+
+                    <div class="modal fade" id="editVehicleModal-@car.VehicleId" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header bg-success text-white">
+                                    <h5 class="modal-title">Edit Vehicle</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <form asp-action="UpdateVehicle" method="post">
+                                    <div class="modal-body text-start">
+                                        <input type="hidden" name="VehicleId" value="@car.VehicleId" />
+                                        <input type="hidden" name="PropertyId" value="@Model.PropertyId" />
+
+                                        <div class="row g-2 mb-3">
+                                            <div class="col-6">
+                                                <label class="small fw-bold text-muted">Sticker Year</label>
+                                                <input type="number" class="form-control" name="StickerYear" value="@car.StickerYear" readonly />
+                                            </div>
+                                            <div class="col-6">
+                                                <label class="small fw-bold text-muted">Sticker Number</label>
+                                                <input type="text" class="form-control fw-bold" name="StickerNumber" value="@car.StickerNumber" placeholder="Ex. 0015" />
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label class="form-label small fw-bold text-muted">Vehicle Type</label>
+                                            <select class="form-select" name="VehicleType" required>
+                                                <option value="Car" selected="@(car.VehicleType == "Car")">Car</option>
+                                                <option value="Motorcycle" selected="@(car.VehicleType == "Motorcycle")">Motorcycle</option>
+                                                <option value="Van" selected="@(car.VehicleType == "Van")">Van</option>
+                                                <option value="E-Bike" selected="@(car.VehicleType == "E-Bike")">E-Bike</option>
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label small fw-bold text-muted">Plate Number</label>
+                                            <input type="text" class="form-control text-uppercase fw-bold" name="PlateNumber" value="@car.PlateNumber" required />
+                                        </div>
+                                        <div class="row g-2 mb-3">
+                                            <div class="col-4"><input type="text" class="form-control" name="Make" value="@car.Make" placeholder="Make" /></div>
+                                            <div class="col-4"><input type="text" class="form-control" name="Model" value="@car.Model" placeholder="Model" /></div>
+                                            <div class="col-4"><input type="text" class="form-control" name="Color" value="@car.Color" placeholder="Color" /></div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label small fw-bold text-muted">Owner</label>
+                                            <input type="text" class="form-control" name="VehicleOwner" value="@car.VehicleOwner" required />
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                        <button type="submit" class="btn btn-success">Save Changes</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                }
+                @if (!Model.Vehicles.Any())
+                {
+                    <tr><td colspan="@(canEdit ? 6 : 5)" class="text-center text-muted p-4">No vehicles registered.</td></tr>
+                }
+            </tbody>
+        </table>
+
+        @if (Model.Vehicles.Count > pageSize)
+        {
+            <div class="d-flex justify-content-between align-items-center mt-3">
+                @{
+                    var vTotal = (int)Math.Ceiling((double)Model.Vehicles.Count / pageSize);
+                }
+                @if (vPage > 1)
+                {
+                    <a asp-action="Details" asp-route-id="@Model.PropertyId" asp-route-vPage="@(vPage - 1)" class="btn btn-sm btn-outline-secondary">Previous</a>
+                }
+                else
+                {
+
+                    <button class="btn btn-sm btn-outline-secondary" disabled>Previous</button>
+                }
+                <span class="small text-muted fw-bold">Page @vPage of @vTotal</span>
+                @if (vPage < vTotal)
+                {
+                    <a asp-action="Details" asp-route-id="@Model.PropertyId" asp-route-vPage="@(vPage + 1)" class="btn btn-sm btn-outline-secondary">Next</a>
+                }
+                else
+                {
+
+                    <button class="btn btn-sm btn-outline-secondary" disabled>Next</button>
+                }
+            </div>
+        }
+
+        @if (canEdit)
+        {
+            <div class="text-end mt-3">
+                <button class="btn btn-outline-success btn-sm" data-bs-toggle="modal" data-bs-target="#addVehicleModal">
+                    <i class="fa-solid fa-car me-1"></i> Add New Vehicle
+                </button>
+            </div>
+        }
+    </div>
+
+    <div class="tab-pane fade @(ViewBag.ActiveTab == "tenant" ? "show active" : "")" id="tenant">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="text-secondary">Registered Tenants</h5>
+
+            @if (canEdit)
+            {
+                <button class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#addTenantModal">
+                    <i class="fa-solid fa-user-plus me-1"></i> Add Tenant
+                </button>
+            }
+        </div>
+
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Full Name</th>
+                    <th>Contact</th>
+                    <th>Lease Period</th>
+                    <th>Status</th>
+                    @if (canEdit)
+                    {
+                        <th class="text-end">Action</th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @{
+                    var pagedTenants = Model.Tenants.Skip((tenPage - 1) * pageSize).Take(pageSize);
+                }
+                @foreach (var t in pagedTenants)
+                {
+                    <tr>
+                        <td class="fw-bold text-dark">@t.FullName</td>
+                        <td>@(t.ContactNumber ?? "N/A")</td>
+                        <td>
+                            <span class="d-block small text-muted">Start: @(t.StartDate?.ToString("MMM dd, yyyy") ?? "N/A")</span>
+                            <span class="d-block small text-muted">End: @(t.EndDate?.ToString("MMM dd, yyyy") ?? "Ongoing")</span>
+                        </td>
+                        <td>
+                            @if (t.Status == "Active")
+                            {
+                                <span class="badge bg-success">Active</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">Inactive</span>
+                            }
+                        </td>
+
+                        @if (canEdit)
+                        {
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-link text-success" data-bs-toggle="modal" data-bs-target="#editTenantModal-@t.TenantId">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                </button>
+                            </td>
+                        }
+                    </tr>
+
+                    <div class="modal fade" id="editTenantModal-@t.TenantId" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header bg-success text-white">
+                                    <h5 class="modal-title">Edit Tenant</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <form asp-action="UpdateTenant" method="post">
+                                    <div class="modal-body text-start">
+                                        <input type="hidden" name="TenantId" value="@t.TenantId" />
+                                        <input type="hidden" name="PropertyId" value="@Model.PropertyId" />
+
+                                        <div class="mb-3">
+                                            <label class="small fw-bold text-muted">Full Name</label>
+                                            <input type="text" class="form-control" name="FullName" value="@t.FullName" required />
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="small fw-bold text-muted">Contact Number</label>
+                                            <input type="text" class="form-control" name="ContactNumber" value="@t.ContactNumber" />
+                                        </div>
+                                        <div class="row g-2 mb-3">
+                                            <div class="col-6">
+                                                <label class="small fw-bold text-muted">Start Date</label>
+                                                <input type="date" class="form-control" name="StartDate" value="@(t.StartDate?.ToString("yyyy-MM-dd"))" />
+                                            </div>
+                                            <div class="col-6">
+                                                <label class="small fw-bold text-muted">End Date</label>
+                                                <input type="date" class="form-control" name="EndDate" value="@(t.EndDate?.ToString("yyyy-MM-dd"))" />
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="small fw-bold text-muted">Status</label>
+                                            <select class="form-select" name="Status">
+                                                <option value="Active" selected="@(t.Status == "Active")">Active</option>
+                                                <option value="Inactive" selected="@(t.Status == "Inactive")">Inactive</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                        <button type="submit" class="btn btn-success">Save Changes</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                }
+
+                @if (!Model.Tenants.Any())
+                {
+                    <tr><td colspan="@(canEdit ? 5 : 4)" class="text-center text-muted p-4">No tenants recorded.</td></tr>
+                }
+            </tbody>
+        </table>
+
+        @if (Model.Tenants.Count > pageSize)
+        {
+            <div class="d-flex justify-content-between align-items-center mt-3">
+                @{
+                    var tenTotal = (int)Math.Ceiling((double)Model.Tenants.Count / pageSize);
+                }
+
+                @if (tenPage > 1)
+                {
+                    <a asp-action="Details" asp-route-id="@Model.PropertyId" asp-route-tenPage="@(tenPage - 1)" class="btn btn-sm btn-outline-secondary">Previous</a>
+                }
+                else
+                {
+
+                    <button class="btn btn-sm btn-outline-secondary" disabled>Previous</button>
+                }
+
+                <span class="small text-muted fw-bold">Page @tenPage of @tenTotal</span>
+
+                @if (tenPage < tenTotal)
+                {
+                    <a asp-action="Details" asp-route-id="@Model.PropertyId" asp-route-tenPage="@(tenPage + 1)" class="btn btn-sm btn-outline-secondary">Next</a>
+                }
+                else
+                {
+
+                    <button class="btn btn-sm btn-outline-secondary" disabled>Next</button>
+                }
+            </div>
+        }
+    </div>
+
+    <div class="tab-pane fade @(ViewBag.ActiveTab == "cert" ? "show active" : "")" id="cert">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Date Issued</th>
+                    <th>Type</th>
+                    <th>Requestor Name</th>
+                    <th>Fee</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var cert in Model.Certifications.OrderByDescending(c => c.DateIssued).Take(15))
+                {
+                    <tr>
+                        <td>@cert.DateIssued?.ToString("MMM dd, yyyy")</td>
+                        <td><span class="fw-bold">@cert.CertType</span></td>
+                        <td>@cert.RequestorName</td>
+                        <td>₱@cert.FeeAmount.ToString("N2")</td>
+                    </tr>
+                }
+                @if (!Model.Certifications.Any())
+                {
+                    <tr><td colspan="4" class="text-center text-muted p-4">No requests found.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="tab-pane fade @(ViewBag.ActiveTab == "payment" ? "show active" : "")" id="payment">
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <div class="p-3 border rounded bg-light">
+                    <small class="text-muted text-uppercase fw-bold">Total Paid (@currentYear)</small>
+                    <h3 class="text-success fw-bold mt-1">₱@(((decimal)ViewBag.TotalPaidThisYear).ToString("N2"))</h3>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="p-3 border rounded bg-light">
+                    <small class="text-muted text-uppercase fw-bold">Total Outstanding</small>
+                    <h3 class="@ViewBag.OutstandingColor fw-bold mt-1">@ViewBag.OutstandingText</h3>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="p-3 border rounded bg-light">
+                    <small class="text-muted text-uppercase fw-bold">Payment Status</small>
+                    <div class="mt-1">
+                        <span class="badge @ViewBag.StatusBadgeClass fs-5">@ViewBag.StatusText</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <h5 class="mb-3 text-secondary">Transaction Log</h5>
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>OR Number</th>
+                    <th>Date Paid</th>
+                    <th>Amount Paid</th>
+                    <th>Details</th>
+                </tr>
+            </thead>
+            <tbody>
+                @{
+                    var transactions = Model.Transactions.OrderByDescending(t => t.PaymentDate).ToList();
+                }
+                @foreach (var trans in transactions.Skip((tPage - 1) * pageSize).Take(pageSize))
+                {
+                    <tr>
+                        <td class="fw-bold text-dark">@trans.OrNumber</td>
+                        <td>@trans.PaymentDate.ToString("MMM dd, yyyy")</td>
+                        <td class="fw-bold text-success">+ ₱@trans.Amount.ToString("N2")</td>
+                        <td>
+                            <span class="badge bg-secondary">@trans.PaymentType</span>
+                        </td>
+                    </tr>
+                }
+                @if (!transactions.Any())
+                {
+                    <tr><td colspan="4" class="text-center text-muted p-4">No payment history found.</td></tr>
+                }
+            </tbody>
+        </table>
+
+        @if (transactions.Count > pageSize)
+        {
+            <div class="d-flex justify-content-between align-items-center mt-3">
+                @{
+                    var tTotal = (int)Math.Ceiling((double)transactions.Count / pageSize);
+                }
+                @if (tPage > 1)
+                {
+                    <a asp-action="Details" asp-route-id="@Model.PropertyId" asp-route-activeTab="payment" asp-route-tPage="@(tPage - 1)" class="btn btn-sm btn-outline-secondary">Previous</a>
+                }
+                else
+                {
+                    <button class="btn btn-sm btn-outline-secondary" disabled>Previous</button>
+                }
+                <span class="small text-muted fw-bold">Page @tPage of @tTotal</span>
+                @if (tPage < tTotal)
+                {
+                    <a asp-action="Details" asp-route-id="@Model.PropertyId" asp-route-activeTab="payment" asp-route-tPage="@(tPage + 1)" class="btn btn-sm btn-outline-secondary">Next</a>
+                }
+                else
+                {
+                    <button class="btn btn-sm btn-outline-secondary" disabled>Next</button>
+                }
+            </div>
+        }
+    </div>
+
+    <div class="tab-pane fade @(ViewBag.ActiveTab == "finance" ? "show active" : "")" id="finance">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="text-danger">Unpaid Obligations</h5>
+
+            @if (canEdit)
+            {
+                <a asp-controller="Payments" asp-action="Index" asp-route-preSelectId="@Model.PropertyId" class="btn btn-sm text-white" style="background-color: var(--hoa-green);">
+                    <i class="fa-solid fa-credit-card me-2"></i> Process Payment
+                </a>
+            }
+        </div>
+
+        <table class="table table-bordered">
+            <thead class="table-light">
+                <tr>
+                    <th>Month/Year</th>
+                    <th>Amount Due</th>
+                    <th>Partial Paid</th>
+                    <th>Balance</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                @{
+                    var unpaidBills = Model.MonthlyDues
+                    .Where(d => d.Status != "Paid")
+                    .OrderBy(d => d.Year).ThenBy(d => d.Month)
+                    .ToList();
+                }
+                @foreach (var bill in unpaidBills.Skip((dPage - 1) * pageSize).Take(pageSize))
+                {
+                    <tr>
+                        <td>@bill.Month / @bill.Year</td>
+                        <td>@bill.AmountDue.ToString("N2")</td>
+                        <td>@((bill.TotalPaid ?? 0).ToString("N2"))</td>
+                        <td class="fw-bold text-danger">
+                            @((bill.AmountDue - (bill.TotalPaid ?? 0)).ToString("N2"))
+                        </td>
+                        <td><span class="badge bg-warning text-dark">@bill.Status</span></td>
+                    </tr>
+                }
+                @if (!unpaidBills.Any())
+                {
+                    <tr>
+                        <td colspan="5" class="text-center p-5 text-success">
+                            <i class="fa-solid fa-check-circle fa-3x mb-3"></i>
+                            <h4>No Unpaid Bills!</h4>
+                            <p>This property is fully up to date.</p>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        @if (unpaidBills.Count > pageSize)
+        {
+            <div class="d-flex justify-content-between align-items-center mt-3">
+                @{
+                    var dTotal = (int)Math.Ceiling((double)unpaidBills.Count / pageSize);
+                }
+                @if (dPage > 1)
+                {
+                    <a asp-action="Details" asp-route-id="@Model.PropertyId" asp-route-dPage="@(dPage - 1)" class="btn btn-sm btn-outline-secondary">Previous</a>
+                }
+                else
+                {
+
+                    <button class="btn btn-sm btn-outline-secondary" disabled>Previous</button>
+                }
+                <span class="small text-muted fw-bold">Page @dPage of @dTotal</span>
+                @if (dPage < dTotal)
+                {
+                    <a asp-action="Details" asp-route-id="@Model.PropertyId" asp-route-dPage="@(dPage + 1)" class="btn btn-sm btn-outline-secondary">Next</a>
+                }
+                else
+                {
+
+                    <button class="btn btn-sm btn-outline-secondary" disabled>Next</button>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+    .form-control::placeholder {
+        color: #adb5bd !important;
+        opacity: 0.6;
+    }
+</style>
+
+<div class="modal fade" id="addVehicleModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="fa-solid fa-car-side me-2"></i>Register Vehicle</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form asp-action="AddVehicle" method="post">
+                <div class="modal-body">
+                    <input type="hidden" name="PropertyId" value="@Model.PropertyId" />
+                    <input type="hidden" name="StickerYear" value="@DateTime.Now.Year" />
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">Vehicle Type</label>
+                        <select class="form-select" name="VehicleType" required>
+                            <option value="Car">Car</option>
+                            <option value="Motorcycle">Motorcycle</option>
+                            <option value="Van">Van</option>
+                            <option value="E-Bike">E-Bike</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">Plate Number</label>
+                        <input type="text" class="form-control text-uppercase fw-bold" name="PlateNumber" required placeholder="Ex. ABC 1234" />
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-4"><input type="text" class="form-control" name="Make" placeholder="Make" /></div>
+                        <div class="col-4"><input type="text" class="form-control" name="Model" placeholder="Model" /></div>
+                        <div class="col-4"><input type="text" class="form-control" name="Color" placeholder="Color" /></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">Owner / Driver Name</label>
+                        <input type="text" class="form-control" name="VehicleOwner"
+                               value="@(Model.Memberships.FirstOrDefault(m => m.IsCurrentOwner)?.FirstName) @(Model.Memberships.FirstOrDefault(m => m.IsCurrentOwner)?.LastName)" required />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">Register Vehicle</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addTenantModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="fa-solid fa-user-plus me-2"></i>Add Tenant</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form asp-action="AddTenant" method="post">
+                <div class="modal-body">
+                    <input type="hidden" name="PropertyId" value="@Model.PropertyId" />
+                    <input type="hidden" name="Status" value="Active" />
+                    <div class="mb-3">
+                        <label class="small fw-bold text-muted">Full Name</label>
+                        <input type="text" class="form-control" name="FullName" required placeholder="Ex. Mark Lee" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="small fw-bold text-muted">Contact Number</label>
+                        <input type="text" class="form-control" name="ContactNumber" placeholder="09xxxxxxxxx" />
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="small fw-bold text-muted">Start Date (Optional)</label>
+                            <input type="date" class="form-control" name="StartDate" />
+                        </div>
+                        <div class="col-6">
+                            <label class="small fw-bold text-muted">End Date (Optional)</label>
+                            <input type="date" class="form-control" name="EndDate" />
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">Add Tenant</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="transferModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="fa-solid fa-right-left me-2"></i>Transfer Ownership</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form asp-action="TransferOwnership" method="post">
+                <div class="modal-body">
+                    <div class="alert alert-warning small">
+                        <strong>Warning:</strong> This will retire the current owner and lock their profile into the history log. This action cannot be easily undone.
+                    </div>
+
+                    <input type="hidden" name="propertyId" value="@Model.PropertyId" />
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">Date of Transfer / Move Out</label>
+                        <input type="date" name="moveOutDate" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")" required />
+                    </div>
+
+                    <h6 class="mt-4 border-bottom pb-2">New Owner Basic Info</h6>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-muted">First Name</label>
+                            <input type="text" name="newOwnerFirstName" class="form-control" required />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-muted">Last Name</label>
+                            <input type="text" name="newOwnerLastName" class="form-control" required />
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Confirm Transfer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // 1. Check for 'openModal' in the URL (sent from PaymentsController)
+            const urlParams = new URLSearchParams(window.location.search);
+
+            if (urlParams.get('openModal') === 'true') {
+                // 2. Find the Add Vehicle Modal
+                const vehicleModalEl = document.getElementById('addVehicleModal');
+
+                if (vehicleModalEl) {
+                    // 3. Open it using Bootstrap
+                    const modal = new bootstrap.Modal(vehicleModalEl);
+                    modal.show();
+
+                    // 4. Clean the URL
+                    const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?id=@Model.PropertyId&activeTab=vehicle';
+                    window.history.replaceState({path:newUrl},'',newUrl);
+                }
+            }
+        });
+    </script>
+}

@@ -1,0 +1,365 @@
+﻿@{
+    ViewData["Title"] = "Payment Terminal";
+}
+
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="fa-solid fa-check-circle me-2"></i> @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="fa-solid fa-circle-exclamation me-2"></i> @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="row">
+    <div class="col-md-5">
+        <div class="card shadow border-0">
+            <div class="card-header bg-success text-white py-3">
+                <h5 class="card-title fw-bold mb-0"><i class="fa-solid fa-cash-register me-2"></i> Receive Payment</h5>
+            </div>
+            <div class="card-body">
+                <form asp-action="Create" method="post" id="paymentForm">
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">Search Homeowner or Block/Lot <span class="text-danger">*</span></label>
+                        <select name="PropertyId" id="PropertyId" class="form-select select2" asp-items="ViewBag.Properties" required>
+                            <option value="" selected disabled>Type name, block, or lot...</option>
+                        </select>
+                    </div>
+
+                    <fieldset id="paymentFields" disabled>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">Payment For <span class="text-danger">*</span></label>
+                            <select name="PaymentType" id="PaymentType" class="form-select" required>
+                                <option value="MonthlyDue" selected>Monthly Dues</option>
+                                <option value="Sticker">Vehicle Sticker</option>
+                                <option value="Certification">Certification Fee</option>
+                            </select>
+                        </div>
+
+                        <div class="d-none" id="certFields">
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold text-muted">Certification Type <span class="text-danger">*</span></label>
+                                <select name="CertificationType" id="CertificationType" class="form-select">
+                                    <option value="" selected disabled>Select Type...</option>
+                                    <option value="Barangay Clearance (Endorsement)">Barangay Clearance (Endorsement)</option>
+                                    <option value="Construction Permit">Construction Permit</option>
+                                    <option value="Certificate of Residency">Certificate of Residency</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3 d-none" id="otherCertField">
+                                <label class="form-label small fw-bold text-muted">Please Specify <span class="text-danger">*</span></label>
+                                <input type="text" name="OtherCertificationType" id="OtherCertificationType" class="form-control" placeholder="Type certification name" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold text-muted">Requestor Name <span class="text-danger">*</span></label>
+                                <input type="text" name="RequestorName" id="RequestorName" class="form-control" placeholder="Name of person requesting" />
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">Date <span class="text-danger">*</span></label>
+                            <input type="date" name="PaymentDate" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")" required />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">Amount Received <span class="text-danger">*</span></label>
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text bg-light text-success fw-bold">₱</span>
+                                <input type="number" step="0.01" name="Amount" id="AmountInput" class="form-control fw-bold text-success" placeholder="0.00" required />
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label small fw-bold text-muted">Reference / OR No. <span class="text-danger">*</span></label>
+                            <input type="text" name="ReferenceNo" class="form-control fw-bold" placeholder="Required" required />
+                        </div>
+
+                        <button type="submit" class="btn btn-success w-100 py-2 fw-bold shadow-sm" id="submitBtn">
+                            <i class="fa-solid fa-check me-2"></i> Process Payment
+                        </button>
+                    </fieldset>
+
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-7">
+        <div class="card shadow-sm border-0 h-100 bg-light">
+
+            <div class="card-body p-0" id="recentTransactionsPanel">
+                <div class="p-3 bg-white border-bottom">
+                    <h6 class="fw-bold text-dark mb-0"><i class="fa-solid fa-clock-rotate-left me-2"></i> Recent Transactions</h6>
+                    <small class="text-muted">Latest 12 payments encoded</small>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 table-striped">
+                        <thead class="bg-light sticky-top">
+                            <tr>
+                                <th class="small text-muted text-uppercase ps-3">Date</th>
+                                <th class="small text-muted text-uppercase">Prop</th>
+                                <th class="small text-muted text-uppercase">Type</th>
+                                <th class="small text-muted text-uppercase">OR #</th>
+                                <th class="small text-muted text-uppercase text-end pe-3">Amount</th>
+                                <th class="small text-muted text-uppercase">Encoder</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (ViewBag.RecentTransactions != null)
+                            {
+                                foreach (var item in ViewBag.RecentTransactions)
+                                {
+                                    string badgeClass = "bg-secondary";
+                                    if (item.PaymentType == "MonthlyDue") { badgeClass = "bg-primary"; }
+                                    else if (item.PaymentType == "Sticker") { badgeClass = "bg-warning text-dark"; }
+                                    else if (item.PaymentType == "Certification") { badgeClass = "bg-info text-dark"; }
+
+                                    <tr>
+                                        <td class="small fw-bold ps-3">@item.PaymentDate.ToString("MMM dd")</td>
+                                        <td class="small">B@(item.Block) L@(item.Lot)</td>
+                                        <td><span class="badge @badgeClass" style="font-size: 0.7rem;">@item.PaymentType</span></td>
+                                        <td class="small text-muted">@item.OrNumber</td>
+                                        <td class="small fw-bold text-success text-end pe-3">@item.Amount.ToString("N2")</td>
+                                        <td class="small text-muted fst-italic">@item.Encoder</td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card-body p-0 d-none" id="statementPanel">
+                <div class="p-3 bg-white border-bottom">
+                    <h6 class="fw-bold text-dark mb-0">Statement of Account</h6>
+                    <small class="text-muted" id="propNameDisplay">Block X Lot Y</small>
+                </div>
+
+                <div class="p-4 bg-danger bg-opacity-10 text-center border-bottom" id="arrearsHeader">
+                    <small class="text-uppercase fw-bold text-danger">Total Arrears</small>
+                    <h1 class="fw-bold text-danger mb-0" id="totalArrearsDisplay">₱ 0.00</h1>
+                </div>
+
+                <div class="p-3 text-center border-bottom fw-bold d-none" id="eligibilityBanner">
+                </div>
+
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;" id="billsTableContainer">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light sticky-top">
+                            <tr>
+                                <th class="ps-3">Month</th>
+                                <th class="text-end">Due</th>
+                                <th class="text-end">Paid</th>
+                                <th class="text-end pe-3">Balance</th>
+                            </tr>
+                        </thead>
+                        <tbody id="billsTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+    <script>
+        $(document).ready(function () {
+            // --- 1. INITIALIZE SELECT2 ---
+            $('#PropertyId').select2({
+                theme: 'bootstrap-5',
+                placeholder: "Type name, block, or lot...",
+                width: '100%'
+            });
+
+            // --- 2. GET ALL ELEMENTS ---
+            const propSelect = document.getElementById('PropertyId');
+            const paymentFields = document.getElementById('paymentFields');
+            const typeSelect = document.getElementById('PaymentType');
+
+            // Certification Elements
+            const certFields = document.getElementById('certFields');
+            const reqNameInput = document.getElementById('RequestorName');
+            const certTypeInput = document.getElementById('CertificationType');
+            const otherCertField = document.getElementById('otherCertField');
+            const otherCertInput = document.getElementById('OtherCertificationType');
+
+            // Right Panel Elements
+            const recentTransactionsPanel = document.getElementById('recentTransactionsPanel');
+            const statementPanel = document.getElementById('statementPanel');
+            const propNameDisplay = document.getElementById('propNameDisplay');
+            const totalDisplay = document.getElementById('totalArrearsDisplay');
+            const arrearsHeader = document.getElementById('arrearsHeader');
+            const tableBody = document.getElementById('billsTableBody');
+
+            // Eligibility Elements
+            const eligibilityBanner = document.getElementById('eligibilityBanner');
+            const billsTableContainer = document.getElementById('billsTableContainer');
+            const submitBtn = document.getElementById('submitBtn');
+
+            let currentArrears = 0;
+
+            // --- 3. FUNCTION: Load Property Data ---
+            function loadPropertyData(propId, propText) {
+                if (!propId) {
+                    paymentFields.disabled = true;
+                    recentTransactionsPanel.classList.remove('d-none');
+                    statementPanel.classList.add('d-none');
+                    return;
+                }
+
+                paymentFields.disabled = false;
+                recentTransactionsPanel.classList.add('d-none');
+                statementPanel.classList.remove('d-none');
+                propNameDisplay.textContent = propText;
+
+                fetch('/Payments/GetPendingBills?propertyId=' + propId)
+                    .then(response => response.json())
+                    .then(data => {
+                        currentArrears = 0;
+                        tableBody.innerHTML = '';
+
+                        const paidUntilBadge = `<br/><span class="badge bg-info text-dark mt-1">Paid Until: ${data.paidUntil}</span>`;
+                        propNameDisplay.innerHTML = propText + paidUntilBadge;
+
+                        if (data.bills.length === 0) {
+                            tableBody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-success fw-bold">No Arrears</td></tr>`;
+                        } else {
+                            data.bills.forEach(bill => {
+                                currentArrears += bill.balance;
+                                const date = new Date(bill.year, bill.month - 1);
+                                const monthName = date.toLocaleString('default', { month: 'long', year: 'numeric' });
+                                const row = `
+                                    <tr>
+                                        <td class="fw-bold small ps-3">${monthName}</td>
+                                        <td class="text-end text-muted small">₱${bill.amountDue.toFixed(2)}</td>
+                                        <td class="text-end text-success small">₱${bill.paidSoFar.toFixed(2)}</td>
+                                        <td class="text-end fw-bold text-danger pe-3">₱${bill.balance.toFixed(2)}</td>
+                                    </tr>`;
+                                tableBody.innerHTML += row;
+                            });
+                        }
+
+                        // Update Total Box
+                        const label = totalDisplay.previousElementSibling;
+
+                        if (currentArrears > 0) {
+                            totalDisplay.textContent = '₱ ' + currentArrears.toLocaleString('en-US', {minimumFractionDigits: 2});
+                            totalDisplay.className = 'fw-bold text-danger mb-0';
+                            arrearsHeader.className = 'p-4 bg-danger bg-opacity-10 text-center border-bottom';
+                            label.className = 'text-uppercase fw-bold text-danger';
+                            label.textContent = "Total Arrears";
+                        } else if (data.advancedTotal > 0) {
+                            totalDisplay.textContent = '₱ ' + data.advancedTotal.toLocaleString('en-US', {minimumFractionDigits: 2});
+                            totalDisplay.className = 'fw-bold text-success mb-0';
+                            arrearsHeader.className = 'p-4 bg-success bg-opacity-10 text-center border-bottom';
+                            label.className = 'text-uppercase fw-bold text-success';
+                            label.textContent = "Total Advanced";
+                        } else {
+                            totalDisplay.textContent = '₱ 0.00';
+                            totalDisplay.className = 'fw-bold text-success mb-0';
+                            arrearsHeader.className = 'p-4 bg-success bg-opacity-10 text-center border-bottom';
+                            label.className = 'text-uppercase fw-bold text-success';
+                            label.textContent = "Account Updated";
+                        }
+
+                        updateUIBasedOnPaymentType();
+                    });
+            }
+
+            // --- 4. FUNCTION: Update UI based on Payment Type ---
+            function updateUIBasedOnPaymentType() {
+                const selectedType = typeSelect.value;
+
+                // Handle Certification Fields
+                if (selectedType === 'Certification') {
+                    certFields.classList.remove('d-none');
+                    reqNameInput.required = true;
+                    certTypeInput.required = true;
+                } else {
+                    certFields.classList.add('d-none');
+                    reqNameInput.required = false;
+                    certTypeInput.required = false;
+                    otherCertInput.required = false;
+                }
+
+                // Handle Sticker Eligibility Banner
+                if (selectedType === 'Sticker') {
+                    eligibilityBanner.classList.remove('d-none');
+                    arrearsHeader.classList.add('d-none');
+                    billsTableContainer.classList.add('d-none');
+
+                    if (currentArrears > 0) {
+                        eligibilityBanner.className = 'p-4 text-center border-bottom bg-danger text-white';
+                        eligibilityBanner.innerHTML = `<i class="fa-solid fa-circle-xmark fa-2x mb-2"></i><h5 class="fw-bold mb-1">NOT ELIGIBLE FOR STICKER</h5><small>Property has active arrears (₱${currentArrears.toLocaleString('en-US', {minimumFractionDigits: 2})}). Please settle dues first.</small>`;
+                        submitBtn.disabled = true;
+                    } else {
+                        eligibilityBanner.className = 'p-4 text-center border-bottom bg-success text-white';
+                        eligibilityBanner.innerHTML = `<i class="fa-solid fa-circle-check fa-2x mb-2"></i><h5 class="fw-bold mb-0">ELIGIBLE FOR STICKER</h5><small>Account is cleared.</small>`;
+                        submitBtn.disabled = false;
+                    }
+                } else {
+                    eligibilityBanner.classList.add('d-none');
+                    arrearsHeader.classList.remove('d-none');
+                    billsTableContainer.classList.remove('d-none');
+                    submitBtn.disabled = false;
+                }
+            }
+
+            // --- 5. EVENT LISTENERS ---
+
+            // Replaced vanilla JS change listener with Select2 event listener
+            $('#PropertyId').on('select2:select', function (e) {
+                const text = e.params.data.text;
+                loadPropertyData(this.value, text);
+            });
+
+            typeSelect.addEventListener('change', updateUIBasedOnPaymentType);
+
+            // Handle "Other" Certification Type
+            certTypeInput.addEventListener('change', function() {
+                if (this.value === 'Other') {
+                    otherCertField.classList.remove('d-none');
+                    otherCertInput.required = true;
+                } else {
+                    otherCertField.classList.add('d-none');
+                    otherCertInput.required = false;
+                    otherCertInput.value = ''; // clear it
+                }
+            });
+
+            // --- 6. HANDLE PRE-FILLS ---
+            const preSelectId = '@ViewBag.PreSelectId';
+            const preType = '@Html.Raw(ViewBag.PreType)';
+
+            if (preSelectId) {
+                // Update Select2 visually and trigger the load
+                $('#PropertyId').val(preSelectId).trigger('change');
+                const text = $('#PropertyId option:selected').text();
+                loadPropertyData(preSelectId, text);
+            }
+
+            if (preType) {
+                typeSelect.value = preType;
+                updateUIBasedOnPaymentType();
+            }
+        });
+    </script>
+}

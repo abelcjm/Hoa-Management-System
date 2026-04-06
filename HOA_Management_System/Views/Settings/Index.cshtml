@@ -1,0 +1,233 @@
+﻿@model HOA_Management_System.Models.ViewModels.SettingsIndexViewModel
+@{
+    ViewData["Title"] = "Account Settings";
+    bool isAdmin = Model.Profile.Role == "Admin";
+}
+
+<style>
+    /* Override the default Blue active state with your Green theme */
+    .list-group-item.active {
+        background-color: #198754 !important; /* Bootstrap 'success' green */
+        border-color: #198754 !important;
+        color: white !important;
+        font-weight: bold;
+    }
+</style>
+
+<div class="container py-4">
+    <div class="row">
+
+        <div class="col-md-3">
+            <div class="card shadow-sm mb-3">
+                <div class="card-body text-center py-4">
+                    <div class="mb-3">
+                        <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center mx-auto shadow-sm" style="width: 80px; height: 80px; font-size: 2.5rem; font-weight: bold;">
+                            @Model.Profile.Username.Substring(0, 1).ToUpper()
+                        </div>
+                    </div>
+                    <h5 class="fw-bold mb-0">@Model.Profile.Username</h5>
+                    <small class="text-muted d-block">@Model.Profile.Role</small>
+                    <span class="badge bg-light text-dark border mt-2">@Model.Profile.PropertyInfo</span>
+                </div>
+
+                <div class="list-group list-group-flush small fw-bold">
+                    <a href="#profile" data-bs-toggle="tab" class="list-group-item list-group-item-action py-3 @(Model.ActiveTab == "profile" ? "active" : "")">
+                        <i class="fa-solid fa-user-circle me-2"></i> My Profile
+                    </a>
+
+                    @if (isAdmin)
+                    {
+                        <a href="#system" data-bs-toggle="tab" class="list-group-item list-group-item-action py-3 @(Model.ActiveTab == "system" ? "active" : "")">
+                            <i class="fa-solid fa-sliders me-2"></i> System Settings
+                        </a>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-9">
+
+            @if (TempData["Success"] != null)
+            {
+                <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm bg-success text-white">
+                    <i class="fa-solid fa-check-circle me-2"></i> @TempData["Success"]
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
+                </div>
+            }
+            @if (TempData["Error"] != null)
+            {
+                <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm bg-danger text-white">
+                    <i class="fa-solid fa-circle-exclamation me-2"></i> @TempData["Error"]
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
+                </div>
+            }
+
+            <div class="tab-content">
+
+                <div class="tab-pane fade @(Model.ActiveTab == "profile" ? "show active" : "")" id="profile">
+
+                    <div class="card shadow-sm mb-4 border-0">
+                        <div class="card-header bg-white py-3 border-bottom">
+                            <h6 class="mb-0 fw-bold text-success">Account Details</h6>
+                        </div>
+                        <div class="card-body">
+                            <form asp-action="UpdateProfile" method="post">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-bold text-muted">Username</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light"><i class="fa-solid fa-user"></i></span>
+                                            <input asp-for="Profile.Username" class="form-control" />
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-bold text-muted">Email Address</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light"><i class="fa-solid fa-envelope"></i></span>
+                                            <input asp-for="Profile.Email" class="form-control" />
+                                        </div>
+                                    </div>
+                                    <div class="col-12 text-end mt-4">
+                                        <button type="submit" class="btn btn-success px-4">
+                                            <i class="fa-solid fa-save me-2"></i> Save Changes
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div class="card shadow-sm border-0">
+                        <div class="card-header bg-white py-3 border-bottom">
+                            <h6 class="mb-0 fw-bold text-success">Security & Password</h6>
+                        </div>
+                        <div class="card-body">
+                            <form asp-action="ChangePassword" method="post">
+                                <div class="row g-3">
+                                    <div class="col-md-12 mb-2">
+                                        <label class="form-label small fw-bold text-muted">Current Password <span class="text-danger">*</span></label>
+                                        <input type="password" asp-for="Password.OldPassword" class="form-control" placeholder="Enter current password to verify" required />
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-bold text-muted">New Password <span class="text-danger">*</span></label>
+                                        <input type="password" asp-for="Password.NewPassword" class="form-control" placeholder="New secure password" required />
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-bold text-muted">Confirm New Password <span class="text-danger">*</span></label>
+                                        <input type="password" asp-for="Password.ConfirmPassword" class="form-control" placeholder="Re-type new password" required />
+                                    </div>
+
+                                    <div class="col-12 text-end mt-4">
+                                        <button type="submit" class="btn btn-warning text-dark px-4">
+                                            <i class="fa-solid fa-key me-2"></i> Update Password
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                @if (isAdmin)
+                {
+                    <div class="tab-pane fade @(Model.ActiveTab == "system" ? "show active" : "")" id="system">
+
+                        <div class="card shadow-sm mb-4 border-0">
+                            <div class="card-header bg-white py-3 border-bottom">
+                                <h6 class="mb-0 fw-bold text-success">Default System Settings</h6>
+                            </div>
+                            <div class="card-body">
+                                <form asp-action="UpdateSystemSettings" method="post">
+                                    <div class="row align-items-end">
+                                        <div class="col-md-8">
+                                            <label class="form-label fw-bold small text-muted text-uppercase">Default Monthly Due Rate</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text bg-light fw-bold">₱</span>
+                                                <input type="number" step="0.01" asp-for="System.MonthlyFee" class="form-control fw-bold" />
+                                            </div>
+                                            <div class="form-text small">This value would overwrite the bills for this month and onwards.</div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <button type="submit" class="btn btn-success w-100">
+                                                <i class="fa-solid fa-save me-2"></i> Save Default
+                                            </button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        <div class="card shadow-sm border-0 border-top border-warning border-3">
+                            <div class="card-header bg-light py-3 border-bottom">
+                                <h6 class="mb-0 fw-bold text-dark"><i class="fa-solid fa-calendar-days me-2"></i> Generate Billing Records (Range)</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="alert alert-warning small mb-4">
+                                    <i class="fa-solid fa-circle-exclamation me-2"></i>
+                                    <strong>Warning:</strong> This tool will create or update billing records for <strong>ALL properties</strong> within the selected date range.
+                                </div>
+
+                                <form asp-action="GenerateBillingRecords" method="post" onsubmit="return confirm('This will generate/update bills for ALL properties for the selected range. Continue?');">
+                                    <div class="row g-3">
+
+                                        <div class="col-md-5">
+                                            <label class="form-label small fw-bold text-muted">From (Start Month)</label>
+                                            <div class="input-group">
+                                                <select asp-for="System.StartMonth" class="form-select">
+                                                    @for (int i = 1; i <= 12; i++)
+                                                    {
+                                                        <option value="@i">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(i)</option>
+                                                    }
+                                                </select>
+                                                <input type="number" asp-for="System.StartYear" class="form-control" placeholder="Year" value="@DateTime.Now.Year" />
+                                            </div>
+                                        </div>
+
+                                        <div class="col-md-2 d-flex align-items-end justify-content-center pb-2">
+                                            <i class="fa-solid fa-arrow-right fa-lg text-muted"></i>
+                                        </div>
+
+                                        <div class="col-md-5">
+                                            <label class="form-label small fw-bold text-muted">To (End Month)</label>
+                                            <div class="input-group">
+                                                <select asp-for="System.EndMonth" class="form-select">
+                                                    @for (int i = 1; i <= 12; i++)
+                                                    {
+                                                        if (i == 12)
+                                                        {
+                                                            <option value="@i" selected>@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(i)</option>
+                                                        }
+                                                        else
+                                                        {
+                                                            <option value="@i">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(i)</option>
+                                                        }
+                                                    }
+                                                </select>
+                                                <input type="number" asp-for="System.EndYear" class="form-control" placeholder="Year" value="@DateTime.Now.Year" />
+                                            </div>
+                                        </div>
+
+                                        <div class="col-md-12 mt-4">
+                                            <label class="form-label small fw-bold text-muted">Amount to Bill Per Month</label>
+                                            <div class="input-group input-group-lg">
+                                                <span class="input-group-text bg-success text-white border-success fw-bold">₱</span>
+                                                <input type="number" step="0.01" asp-for="System.TargetAmount" class="form-control fw-bold text-success border-success" />
+                                                <button type="submit" class="btn btn-warning text-dark fw-bold px-4">
+                                                    <i class="fa-solid fa-bolt me-2"></i> Generate Bills
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                    </div>
+                }
+
+            </div>
+        </div>
+    </div>
+</div>

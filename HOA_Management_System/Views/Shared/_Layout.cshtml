@@ -1,0 +1,221 @@
+﻿@using Microsoft.AspNetCore.Http
+@using Microsoft.AspNetCore.Hosting
+@using Microsoft.Extensions.Hosting
+@inject IHttpContextAccessor HttpContextAccessor
+@inject IWebHostEnvironment Env
+@{
+    // 1. Get User Info
+    var userRole = HttpContextAccessor.HttpContext.Session.GetString("Role");
+    var currentController = ViewContext.RouteData.Values["Controller"]?.ToString();
+    var currentUsername = HttpContextAccessor.HttpContext.Session.GetString("Username");
+
+    // 2. Define Permissions
+    bool isAdmin = userRole == "Admin";
+    bool isEncoder = userRole == "Encoder";
+    bool isTreasurer = userRole == "Treasurer"; // --- ADDED TREASURER ---
+    bool isStaff = isAdmin || isEncoder || isTreasurer; // --- UPDATED TO INCLUDE TREASURER ---
+
+    // 3. Check Environment
+    bool isDevelopment = Env.IsDevelopment();
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - HOA Management</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+    @if (!isStaff)
+    {
+        <style>
+            .sidebar {
+                display: none !important;
+            }
+
+            .main-content {
+                margin-left: 0 !important;
+                width: 100% !important;
+            }
+        </style>
+    }
+</head>
+<body>
+
+    @if (isStaff)
+    {
+        <div class="sidebar">
+            <div class="sidebar-brand">
+                <i class="fa-solid fa-house-chimney"></i>
+                <span>HOA System</span>
+            </div>
+
+            <ul class="nav flex-column">
+
+                <li class="nav-item">
+                    @if (isAdmin || isTreasurer)
+                    {
+                        <a class="nav-link text-white @(currentController == "Dashboard" ? "active" : "")" asp-controller="Dashboard" asp-action="Index">
+                            <div class="text-white text-center me-2 d-flex align-items-center justify-content-center">
+                                <i class="fa-solid fa-table-columns opacity-10"></i>
+                            </div>
+                            <span class="nav-link-text ms-1">Dashboard</span>
+                        </a>
+                    }
+                    else if (isEncoder)
+                    {
+                        <a class="nav-link text-white @(currentController == "Dashboard" ? "active" : "")" asp-controller="Dashboard" asp-action="EncoderIndex">
+                            <div class="text-white text-center me-2 d-flex align-items-center justify-content-center">
+                                <i class="fa-solid fa-table-columns opacity-10"></i>
+                            </div>
+                            <span class="nav-link-text ms-1">Dashboard</span>
+                        </a>
+                    }
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link text-white @(currentController == "Properties" ? "active" : "")" asp-controller="Properties" asp-action="Index">
+                        <div class="text-white text-center me-2 d-flex align-items-center justify-content-center">
+                            <i class="fa-solid fa-house opacity-10"></i>
+                        </div>
+                        <span class="nav-link-text ms-1">Properties</span>
+                    </a>
+                </li>
+
+                @if (isAdmin || isEncoder)
+                {
+                    <li class="nav-item">
+                        <a class="nav-link text-white @(currentController == "Payments" ? "active" : "")" asp-controller="Payments" asp-action="Index">
+                            <div class="text-white text-center me-2 d-flex align-items-center justify-content-center">
+                                <i class="fa-solid fa-wallet opacity-10"></i>
+                            </div>
+                            <span class="nav-link-text ms-1">Payments</span>
+                        </a>
+                    </li>
+                }
+
+                @if (isAdmin || isTreasurer)
+                {
+                    <li class="nav-item">
+                        <a class="nav-link text-white @(currentController == "Analytics" ? "active" : "")" asp-controller="Analytics" asp-action="Index">
+                            <div class="text-white text-center me-2 d-flex align-items-center justify-content-center">
+                                <i class="fa-solid fa-chart-line opacity-10"></i>
+                            </div>
+                            <span class="nav-link-text ms-1">Analytics</span>
+                        </a>
+                    </li>
+                }
+
+                @if (isAdmin || isTreasurer)
+                {
+                    <li class="nav-item">
+                        <a class="nav-link text-white @(currentController == "Reports" ? "active" : "")" asp-controller="Reports" asp-action="Index">
+                            <div class="text-white text-center me-2 d-flex align-items-center justify-content-center">
+                                <i class="fa-solid fa-file-contract opacity-10"></i>
+                            </div>
+                            <span class="nav-link-text ms-1">Reports</span>
+                        </a>
+                    </li>
+                }
+
+                <li class="nav-item">
+                    <a class="nav-link text-white @(currentController == "Certificates" ? "active" : "")" asp-controller="Certificates" asp-action="Index">
+                        <div class="text-white text-center me-2 d-flex align-items-center justify-content-center">
+                            <i class="fa-solid fa-certificate opacity-10"></i>
+                        </div>
+                        <span class="nav-link-text ms-1">Certificates</span>
+                    </a>
+                </li>
+
+                @if (isAdmin)
+                {
+                    <li class="nav-item">
+                        <a class="nav-link text-white @(currentController == "AuditLogs" ? "active" : "")" asp-controller="AuditLogs" asp-action="Index">
+                            <div class="text-white text-center me-2 d-flex align-items-center justify-content-center">
+                                <i class="fa-solid fa-clock-rotate-left opacity-10"></i>
+                            </div>
+                            <span class="nav-link-text ms-1">Audit Logs</span>
+                        </a>
+                    </li>
+                }
+
+                @if (isDevelopment && isAdmin)
+                {
+                    <li class="nav-item">
+                        <a class="nav-link text-white @(currentController == "Backup" ? "active" : "")" asp-controller="Backup" asp-action="Index">
+                            <div class="text-white text-center me-2 d-flex align-items-center justify-content-center">
+                                <i class="fa-solid fa-database opacity-10"></i>
+                            </div>
+                            <span class="nav-link-text ms-1">Backup</span>
+                        </a>
+                    </li>
+                }
+
+                @if (isAdmin)
+                {
+                    <li class="nav-item">
+                        <a class="nav-link text-white @(currentController == "Users" ? "active" : "")" asp-controller="Users" asp-action="Index">
+                            <div class="text-white text-center me-2 d-flex align-items-center justify-content-center">
+                                <i class="fa-solid fa-users opacity-10"></i>
+                            </div>
+                            <span class="nav-link-text ms-1">Users</span>
+                        </a>
+                    </li>
+                }
+
+                <li class="nav-item">
+                    <a class="nav-link text-white @(currentController == "Settings" ? "active" : "")" asp-controller="Settings" asp-action="Index">
+                        <div class="text-white text-center me-2 d-flex align-items-center justify-content-center">
+                            <i class="fa-solid fa-gear opacity-10"></i>
+                        </div>
+                        <span class="nav-link-text ms-1">Settings</span>
+                    </a>
+                </li>
+
+            </ul>
+        </div>
+    }
+
+    <div class="main-content">
+        <div class="top-bar d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h5 class="m-0 text-success fw-bold text-truncate" style="max-width: 40%;">@ViewData["Title"]</h5>
+
+            <div class="user-profile d-flex align-items-center gap-2 gap-sm-3">
+                @if (!string.IsNullOrEmpty(currentUsername))
+                {
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="bg-success text-white rounded px-2 py-1 small d-none d-sm-block">
+                            @(string.IsNullOrEmpty(userRole) ? "User" : userRole)
+                        </div>
+                        <span class="fw-bold small text-truncate" style="max-width: 120px;">@currentUsername</span>
+                    </div>
+
+                    <a asp-controller="Account" asp-action="Logout" class="btn-logout text-dark text-decoration-none d-flex align-items-center gap-1">
+                        <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                        <span class="d-none d-sm-inline fw-bold">Logout</span>
+                    </a>
+                }
+                else
+                {
+                    <a asp-controller="Account" asp-action="Login" class="btn btn-sm btn-outline-success d-flex align-items-center gap-1">
+                        <i class="fa-solid fa-user"></i>
+                        <span class="d-none d-sm-inline">Login</span>
+                    </a>
+                }
+            </div>
+        </div>
+
+        <div class="container-fluid p-0">
+            @RenderBody()
+        </div>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

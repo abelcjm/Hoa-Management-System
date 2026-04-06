@@ -1,0 +1,266 @@
+﻿@model HOA_Management_System.Models.ViewModels.EncoderDashboardViewModel
+@{
+    ViewData["Title"] = "Encoder Dashboard";
+}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<div class="container-fluid py-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold text-teal mb-1">Encoder Dashboard</h4>
+            <small class="text-secondary">Track and manage payment collections</small>
+        </div>
+        <div class="bg-white px-3 py-2 rounded border text-secondary shadow-sm">
+            <i class="fa-regular fa-calendar me-2"></i> @DateTime.Now.ToString("MMMM yyyy")
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 h-100 p-3">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <small class="text-secondary">Total Collected</small>
+                        <h3 class="fw-bold text-dark mt-2 mb-0">₱@Model.TotalCollectedThisMonth.ToString("N0")</h3>
+                        <small class="text-secondary">This Month</small>
+                    </div>
+                    <div class="bg-teal-light text-teal rounded p-3">
+                        <i class="fa-solid fa-peso-sign fa-lg"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 h-100 p-3">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <small class="text-secondary">Collected Today</small>
+                        <h3 class="fw-bold text-dark mt-2 mb-0">₱@Model.CollectedToday.ToString("N0")</h3>
+                        <small class="text-success fw-bold">Today's Cash Flow</small>
+                    </div>
+                    <div class="bg-teal-light text-teal rounded p-3">
+                        <i class="fa-solid fa-wallet fa-lg"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 h-100 p-3">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <small class="text-secondary">Outstanding Balance</small>
+                        <h3 class="fw-bold text-danger mt-2 mb-0">₱@Model.TotalOutstandingBalance.ToString("N0")</h3>
+                        <small class="text-secondary">from <span class="fw-bold text-dark">@Model.UnpaidAccountsThisMonthCount</span> unpaid bills</small>
+                    </div>
+                    <div class="bg-danger bg-opacity-10 text-danger rounded p-3">
+                        <i class="fa-solid fa-circle-exclamation fa-lg"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 h-100 p-3">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <small class="text-secondary">Overdue Accounts</small>
+                        <h3 class="fw-bold text-danger mt-2 mb-0">@Model.OverdueAccountsCount</h3>
+                        <small class="text-secondary">Past Deadlines</small>
+                    </div>
+                    <div class="bg-danger bg-opacity-10 text-danger rounded p-3">
+                        <i class="fa-solid fa-clock-rotate-left fa-lg"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-8">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-white py-3 border-0">
+                    <h6 class="fw-bold text-dark mb-0">Recent Transactions</h6>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light text-secondary small text-uppercase">
+                            <tr>
+                                <th class="ps-4">Date</th>
+                                <th>Homeowner</th>
+                                <th>Type</th>
+                                <th>Amount</th>
+                                <th>OR No.</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.RecentTransactions)
+                            {
+                                <tr>
+                                    <td class="ps-4 text-secondary small">@item.Date</td>
+                                    <td class="fw-bold text-dark">@item.Homeowner</td>
+                                    <td class="text-secondary small">@item.Type</td>
+                                    <td class="fw-bold text-dark">₱@item.Amount.ToString("N0")</td>
+                                    <td class="text-secondary small">@item.OrNumber</td>
+                                </tr>
+                            }
+                            @if (!Model.RecentTransactions.Any())
+                            {
+                                <tr><td colspan="5" class="text-center py-4 text-muted">No transactions found.</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 h-100 d-flex flex-column">
+                <div class="card-header bg-white py-3 border-0 flex-shrink-0">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="fw-bold text-dark mb-0">Collection Hit List</h6>
+                        <span class="badge bg-danger">@Model.TopOverdueAccounts.Count Accounts</span>
+                    </div>
+                    <small class="text-secondary">Scroll to view all overdue properties</small>
+                </div>
+                <div class="card-body p-0 flex-grow-1" style="height: 0; overflow-y: auto;">
+                    <div class="list-group list-group-flush">
+                        @foreach (var acc in Model.TopOverdueAccounts)
+                        {
+                            <div class="list-group-item px-4 py-3 border-0 border-bottom hover-bg-light">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <h6 class="mb-0 fw-bold text-dark">@acc.BlockLot</h6>
+                                    <h6 class="fw-bold text-danger mb-0">₱@acc.TotalDebt.ToString("N0")</h6>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-secondary">@acc.MonthsOverdue months unpaid</small>
+                                    <a asp-controller="Properties" asp-action="Details" asp-route-id="@acc.PropertyId" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size: 0.75rem;">View</a>
+                                </div>
+                            </div>
+                        }
+                        @if (!Model.TopOverdueAccounts.Any())
+                        {
+                            <div class="p-4 text-center text-muted">No overdue accounts! Great job!</div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white py-3 border-0">
+                    <h6 class="fw-bold text-dark mb-0">Daily Collection Trend (Last 8 Days)</h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="dailyTrendChart" height="80"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mb-4">
+        <h6 class="fw-bold text-dark mb-3">Quick Actions</h6>
+        <div class="row g-3">
+            <div class="col-md-4">
+                <a asp-controller="Payments" asp-action="Index" class="card shadow-sm border-0 text-decoration-none action-card">
+                    <div class="card-body text-center py-4">
+                        <i class="fa-solid fa-plus fa-lg text-dark mb-2"></i>
+                        <h6 class="fw-bold text-dark mb-0 small">Add Payment</h6>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-4">
+                <a asp-controller="Properties" asp-action="Index" class="card shadow-sm border-0 text-decoration-none action-card">
+                    <div class="card-body text-center py-4">
+                        <i class="fa-solid fa-users fa-lg text-dark mb-2"></i>
+                        <h6 class="fw-bold text-dark mb-0 small">View Properties</h6>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-4">
+                <a asp-controller="Reports" asp-action="Index" class="card shadow-sm border-0 text-decoration-none action-card">
+                    <div class="card-body text-center py-4">
+                        <i class="fa-solid fa-file-invoice fa-lg text-dark mb-2"></i>
+                        <h6 class="fw-bold text-dark mb-0 small">Generate Report</h6>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<style>
+    .text-teal {
+        color: #0f766e !important;
+    }
+
+    .bg-teal-light {
+        background-color: #ccfbf1 !important;
+    }
+
+    .btn-teal {
+        background-color: #0f766e !important;
+        border-color: #0f766e !important;
+    }
+
+    .action-card:hover {
+        background-color: #f8f9fa;
+        transition: 0.2s;
+    }
+
+    .hover-bg-light:hover {
+        background-color: #f8f9fa;
+        transition: 0.15s;
+    }
+
+    /* Scrollbar styling for the Hit List */
+    .card-body::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .card-body::-webkit-scrollbar-track {
+        background: #f1f1f1;
+    }
+
+    .card-body::-webkit-scrollbar-thumb {
+        background: #ccc;
+        border-radius: 3px;
+    }
+</style>
+
+<script>
+    const ctxDaily = document.getElementById('dailyTrendChart').getContext('2d');
+    new Chart(ctxDaily, {
+        type: 'line',
+        data: {
+            labels: @Json.Serialize(Model.DailyTrendLabels),
+            datasets: [{
+                label: 'Collection',
+                data: @Json.Serialize(Model.DailyTrendValues),
+                borderColor: '#0f766e',
+                backgroundColor: 'rgba(20, 184, 166, 0.1)',
+                borderWidth: 2,
+                tension: 0.4,
+                fill: true,
+                pointBackgroundColor: '#fff',
+                pointBorderColor: '#0f766e',
+                pointRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, grid: { borderDash: [2, 4] } },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+</script>

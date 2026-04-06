@@ -1,0 +1,220 @@
+﻿@model IEnumerable<HOA_Management_System.Models.AuditLog>
+
+@{
+    ViewData["Title"] = "System Audit Logs";
+}
+
+@functions {
+    string GetActionIcon(string actionType)
+    {
+        return actionType switch
+        {
+            "Add" => "fa-circle-plus",
+            "Create" => "fa-circle-plus", // Handle both naming conventions
+            "Edit" => "fa-pen-to-square",
+            "Update" => "fa-pen-to-square",
+            "Delete" => "fa-trash-can",
+            "Login" => "fa-arrow-right-to-bracket",
+            _ => "fa-circle-info"
+        };
+    }
+
+    string GetBadgeClass(string actionType)
+    {
+        return actionType switch
+        {
+            "Add" => "bg-success",
+            "Create" => "bg-success",
+            "Edit" => "bg-primary", // Primary is usually blue
+            "Update" => "bg-primary",
+            "Delete" => "bg-danger",
+            "Login" => "bg-secondary",
+            _ => "bg-info"
+        };
+    }
+}
+
+<div class="card-box">
+
+    <div class="card mb-4 shadow-sm border-0">
+        <div class="card-body bg-light rounded">
+            <form method="get" asp-action="Index" class="row g-3">
+
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-muted">Date</label>
+                    <input type="date" name="filterDate" class="form-control" value="@ViewData["FilterDate"]" />
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-muted">User</label>
+                    <input type="text" name="filterUser" class="form-control"
+                           placeholder="Search username..."
+                           value="@ViewData["FilterUser"]" />
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold text-muted">Action</label>
+                    <select name="filterAction" class="form-select">
+                        <option value="">All Actions</option>
+                        @if (ViewBag.ActionList != null)
+                        {
+                            @foreach (var action in ViewBag.ActionList as List<string>)
+                            {
+                                if (ViewData["FilterAction"]?.ToString() == action)
+                                {
+                                    <option value="@action" selected>@action</option>
+                                }
+                                else
+                                    {
+                                        
+                                    }
+                                {
+                                    <option value="@action">@action</option>
+                                }
+                            }
+                        }
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold text-muted">Module</label>
+                    <select name="filterModule" class="form-select">
+                        <option value="">All Modules</option>
+                        @if (ViewBag.ModuleList != null)
+                        {
+                            @foreach (var module in ViewBag.ModuleList as List<string>)
+                            {
+                                if (ViewData["FilterModule"]?.ToString() == module)
+                                {
+                                    <option value="@module" selected>@module</option>
+                                }
+                                else
+                                {
+                                    <option value="@module">@module</option>
+                                }
+                            }
+                        }
+                    </select>
+                </div>
+
+                <div class="col-md-2 d-flex align-items-end gap-2">
+                    <button type="submit" class="btn btn-success w-100 fw-bold">
+                        <i class="fa-solid fa-filter"></i> Filter
+                    </button>
+                    <a asp-action="Index" class="btn btn-outline-secondary" title="Reset">
+                        <i class="fa-solid fa-rotate-left"></i>
+                    </a>
+                </div>
+
+            </form>
+        </div>
+    </div>
+
+    <div class="mt-4 table-responsive">
+        <table class="table table-hover table-custom align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Date / Time</th>
+                    <th>User</th>
+                    <th>Action</th>
+                    <th>Module Affected</th>
+                    <th>Details</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Any())
+                {
+                    <tr>
+                        <td colspan="5" class="text-center py-5 text-muted">
+                            <i class="fa-solid fa-clock-rotate-left fa-2x mb-3 text-secondary opacity-50"></i>
+                            <p>No audit logs found matching your criteria.</p>
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td style="white-space: nowrap;">
+                                <span class="fw-bold text-dark">@item.Timestamp.ToString("yyyy-MM-dd")</span><br />
+                                <small class="text-muted">@item.Timestamp.ToString("hh:mm tt")</small>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-secondary text-white rounded-circle d-flex justify-content-center align-items-center me-2" style="width: 30px; height: 30px;">
+                                        <i class="fa-solid fa-user small"></i>
+                                    </div>
+                                    <span class="fw-semibold">
+                                        @if (item.User != null)
+                                        {
+                                            @item.User.Username
+                                        }
+                                        else
+                                        {
+
+                                            <span class="text-muted">System</span>
+                                        }
+                                    </span>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge rounded-pill @GetBadgeClass(item.ActionType) px-3 py-2">
+                                    <i class="fa-solid @GetActionIcon(item.ActionType) me-2"></i>
+                                    @item.ActionType
+                                </span>
+                            </td>
+                            <td class="text-primary fw-bold">
+                                @item.TableName
+                            </td>
+                            <td class="text-muted small text-wrap" style="max-width: 300px;">
+                                @item.Details
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+
+        <div class="d-flex justify-content-between align-items-center mt-3">
+
+            @if (ViewBag.CurrentPage > 1)
+            {
+                <a asp-action="Index"
+                   asp-route-page="@(ViewBag.CurrentPage - 1)"
+                   asp-route-filterDate="@ViewData["FilterDate"]"
+                   asp-route-filterUser="@ViewData["FilterUser"]"
+                   asp-route-filterAction="@ViewData["FilterAction"]"
+                   asp-route-filterModule="@ViewData["FilterModule"]"
+                   class="btn btn-outline-success">
+                    <i class="fa-solid fa-chevron-left"></i> Previous
+                </a>
+            }
+            else
+            {
+                <button class="btn btn-outline-secondary" disabled>Previous</button>
+            }
+
+            <span class="text-muted small fw-bold">
+                Page @ViewBag.CurrentPage of @ViewBag.TotalPages
+            </span>
+
+            @if (ViewBag.CurrentPage < ViewBag.TotalPages)
+            {
+                <a asp-action="Index"
+                   asp-route-page="@(ViewBag.CurrentPage + 1)"
+                   asp-route-filterDate="@ViewData["FilterDate"]"
+                   asp-route-filterUser="@ViewData["FilterUser"]"
+                   asp-route-filterAction="@ViewData["FilterAction"]"
+                   asp-route-filterModule="@ViewData["FilterModule"]"
+                   class="btn btn-outline-success">
+                    Next <i class="fa-solid fa-chevron-right"></i>
+                </a>
+            }
+            else
+            {
+                <button class="btn btn-outline-secondary" disabled>Next</button>
+            }
+        </div>
+    </div>
+</div>

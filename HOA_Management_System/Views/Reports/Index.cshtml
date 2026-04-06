@@ -1,0 +1,132 @@
+﻿@model HOA_Management_System.Models.ViewModels.ReportsViewModel
+@{
+    ViewData["Title"] = "Generate Reports";
+}
+
+<div class="container py-4">
+    <h4 class="fw-bold text-teal mb-4"><i class="fa-solid fa-file-export me-2"></i>Generate Reports</h4>
+
+    <div class="row g-4">
+        <div class="col-md-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-teal text-white fw-bold">
+                    <i class="fa-solid fa-money-bill-trend-up me-2"></i> Financial Report
+                </div>
+                <div class="card-body">
+                    <p class="text-secondary small">Comprehensive analysis including Executive Summary, Trends, and Detailed Accounting.</p>
+
+                    <form asp-action="GenerateReport" method="post" target="_blank" id="finForm">
+                        <input type="hidden" name="ReportType" value="Financial" />
+                        <input type="hidden" name="ExportFormat" value="PDF" />
+
+                        <div class="row mb-3">
+                            <div class="col-4">
+                                <label class="form-label fw-bold small">Type</label>
+                                <select name="FilterType" id="filterType" class="form-select form-select-sm" onchange="updatePeriods()">
+                                    <option value="Historical" selected>Historical</option>
+                                    <option value="Yearly">Yearly</option>
+                                    <option value="Quarterly">Quarterly</option>
+                                    <option value="Monthly">Monthly</option>
+                                </select>
+                            </div>
+                            <div class="col-4" id="yearDiv" style="display:none;">
+                                <label class="form-label fw-bold small">Year</label>
+                                <select name="SelectedYear" class="form-select form-select-sm">
+                                    @foreach (var year in Model.AvailableYears)
+                                    {
+                                        <option value="@year">@year</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-4" id="periodDiv" style="display:none;">
+                                <label class="form-label fw-bold small">Period</label>
+                                <select name="SelectedPeriod" id="periodSelect" class="form-select form-select-sm"></select>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-light border small text-muted mb-3">
+                            <i class="fa-solid fa-file-pdf text-danger me-2"></i> Output Format: <strong>PDF Document</strong>
+                        </div>
+
+                        <button type="submit" class="btn btn-teal w-100">Generate Report</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-dark text-white fw-bold">
+                    <i class="fa-solid fa-users-rectangle me-2"></i> DHSUD Master List
+                </div>
+                <div class="card-body">
+                    <p class="text-secondary small">Official membership list required by DHSUD. Includes Block/Lot, Owner/Tenant info.</p>
+                    <form asp-action="GenerateReport" method="post">
+                        <input type="hidden" name="ReportType" value="DHSUD" />
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small">Format</label>
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" class="btn-check" name="ExportFormat" id="dcsv" value="CSV" checked>
+                                <label class="btn btn-outline-secondary btn-sm" for="dcsv"><i class="fa-solid fa-file-csv me-1"></i> CSV</label>
+
+                                <input type="radio" class="btn-check" name="ExportFormat" id="dxls" value="Excel">
+                                <label class="btn btn-outline-success btn-sm" for="dxls"><i class="fa-solid fa-file-excel me-1"></i> Excel</label>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-dark w-100">Download Data</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function updatePeriods() {
+        const type = document.getElementById('filterType').value;
+        const yearDiv = document.getElementById('yearDiv');
+        const periodDiv = document.getElementById('periodDiv');
+        const select = document.getElementById('periodSelect');
+
+        select.innerHTML = "";
+
+        if (type === "Historical") {
+            yearDiv.style.display = "none";
+            periodDiv.style.display = "none";
+        } else if (type === "Yearly") {
+            yearDiv.style.display = "block";
+            periodDiv.style.display = "none";
+        } else {
+            yearDiv.style.display = "block";
+            periodDiv.style.display = "block";
+
+            if (type === "Quarterly") {
+                ["Q1 (Jan-Mar)", "Q2 (Apr-Jun)", "Q3 (Jul-Sep)", "Q4 (Oct-Dec)"].forEach((q, i) => select.add(new Option(q, i + 1)));
+            } else {
+                ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].forEach((m, i) => select.add(new Option(m, i + 1)));
+            }
+        }
+    }
+    // Initialize on load
+    document.addEventListener("DOMContentLoaded", updatePeriods);
+</script>
+
+<style>
+    .text-teal {
+        color: #0f766e !important;
+    }
+
+    .bg-teal {
+        background-color: #0f766e !important;
+    }
+
+    .btn-teal {
+        background-color: #0f766e !important;
+        color: white;
+    }
+
+        .btn-teal:hover {
+            background-color: #115e59 !important;
+            color: white;
+        }
+</style>

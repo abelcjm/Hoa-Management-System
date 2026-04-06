@@ -1,0 +1,256 @@
+﻿@model HOA_Management_System.Models.ViewModels.HomeownerPortalViewModel
+@{
+    ViewData["Title"] = "My Dashboard";
+}
+
+<div class="container py-4 py-md-5" style="max-width: 1150px;">
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+            <i class="fa-solid fa-circle-check me-2"></i> @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+            <i class="fa-solid fa-circle-exclamation me-2"></i> @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="card border-0 shadow-sm rounded-4 mb-4 text-white" style="background-color: #115e59;">
+        <div class="card-body p-3 p-md-4">
+            <div class="row align-items-center g-3">
+
+                <div class="col-md-7 col-lg-8 d-flex align-items-center">
+                    <i class="fa-solid fa-house-chimney fa-2x me-3 opacity-75"></i>
+                    <div style="min-width: 0;">
+                        <h3 class="fw-bold mb-0 text-truncate mobile-header-text">@Model.FullName</h3>
+                        <p class="mb-0 opacity-75 small">Block & Lot: @Model.BlockLot</p>
+                        <small class="opacity-50 text-truncate d-block">@Model.Email</small>
+                    </div>
+                </div>
+
+                <div class="col-md-5 col-lg-4">
+                    <div class="border-top border-md-0 pt-3 pt-md-0 mt-2 mt-md-0" style="border-color: rgba(255,255,255,0.1) !important;">
+                        <div class="d-flex justify-content-between align-items-center d-md-block text-md-end">
+                            <div class="text-start text-md-end">
+                                <small class="text-uppercase opacity-50 d-block" style="font-size: 0.7rem;">Current Date</small>
+                                <div class="fw-bold mb-0 mb-md-2">
+                                    <span class="d-none d-md-inline">@DateTime.Now.ToString("MMMM dd, yyyy")</span>
+                                    <span class="d-inline d-md-none">@DateTime.Now.ToString("MM/dd/yyyy")</span>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-light rounded-pill px-3 mt-md-2" data-bs-toggle="modal" data-bs-target="#settingsModal">
+                                <i class="fa-solid fa-gear me-1"></i> Settings
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-body p-3 p-md-4">
+            <div class="d-flex align-items-center mb-2" style="color: #115e59;">
+                <i class="fa-solid fa-peso-sign me-2"></i>
+                <h6 class="fw-bold mb-0">Total Outstanding Balance</h6>
+            </div>
+
+            <h1 class="fw-bold mb-0 balance-text" style="color: #115e59;">₱@Model.TotalBalance.ToString("N2")</h1>
+            <small class="text-muted">@Model.UnpaidBills.Count unpaid bill(s)</small>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-header bg-white p-3 p-md-4 border-0 rounded-top-4">
+            <h6 class="fw-bold mb-0" style="color: #115e59;"><i class="fa-regular fa-calendar-xmark me-2"></i>Unpaid Bills</h6>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 mobile-table">
+                    <thead class="bg-light text-secondary">
+                        <tr>
+                            <th class="ps-3 ps-md-4 py-3 fw-bold small text-nowrap">Month</th>
+                            <th class="py-3 fw-bold small text-nowrap">Type</th>
+                            <th class="py-3 fw-bold small text-nowrap">Due Date</th>
+                            <th class="py-3 fw-bold small text-end pe-3 pe-md-4 text-nowrap">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var bill in Model.UnpaidBills)
+                        {
+                            <tr>
+                                <td class="ps-3 ps-md-4 text-nowrap">
+                                    <span class="d-none d-md-inline">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(bill.Month) @bill.Year</span>
+                                    <span class="d-inline d-md-none">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedMonthName(bill.Month) @bill.Year</span>
+                                </td>
+                                <td class="text-secondary text-nowrap">Monthly Dues</td>
+                                <td class="text-secondary text-nowrap">
+                                    <span class="d-none d-md-inline">@(new DateTime(bill.Year, bill.Month, 10).ToString("MMM dd, yyyy"))</span>
+                                    <span class="d-inline d-md-none">@(new DateTime(bill.Year, bill.Month, 10).ToString("MM/dd/yyyy"))</span>
+                                </td>
+                                <td class="text-end pe-3 pe-md-4 fw-bold text-dark text-nowrap">₱@((bill.AmountDue - (bill.TotalPaid ?? 0)).ToString("N2"))</td>
+                            </tr>
+                        }
+                        @if (!Model.UnpaidBills.Any())
+                        {
+                            <tr><td colspan="4" class="text-center py-4 text-muted small">No unpaid bills found.</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 mb-5">
+        <div class="card-header bg-white p-3 p-md-4 border-0 rounded-top-4">
+            <h6 class="fw-bold mb-0" style="color: #115e59;"><i class="fa-solid fa-clock-rotate-left me-2"></i>Payment History</h6>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 mobile-table">
+                    <thead class="bg-light text-secondary">
+                        <tr>
+                            <th class="ps-3 ps-md-4 py-3 fw-bold small text-nowrap">Date</th>
+                            <th class="py-3 fw-bold small text-nowrap">Type</th>
+                            <th class="py-3 fw-bold small text-nowrap">OR Number</th>
+                            <th class="py-3 fw-bold small text-end pe-3 pe-md-4 text-nowrap">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var pay in Model.PaymentHistory)
+                        {
+                            <tr>
+                                <td class="ps-3 ps-md-4 text-nowrap">
+                                    <span class="d-none d-md-inline">@pay.PaymentDate.ToString("MMM dd, yyyy")</span>
+                                    <span class="d-inline d-md-none">@pay.PaymentDate.ToString("MM/dd/yyyy")</span>
+                                </td>
+                                <td class="text-secondary text-nowrap">@pay.PaymentType</td>
+                                <td class="text-secondary text-nowrap">@pay.OrNumber</td>
+                                <td class="text-end pe-3 pe-md-4 fw-bold text-success text-nowrap">₱@pay.Amount.ToString("N2")</td>
+                            </tr>
+                        }
+                        @if (!Model.PaymentHistory.Any())
+                        {
+                            <tr><td colspan="4" class="text-center py-4 text-muted small">No payment history found.</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div class="modal fade" id="settingsModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header text-white border-0" style="background-color: #115e59;">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-user-gear me-2"></i>Account Settings</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form asp-action="UpdateSettings" method="post">
+                <div class="modal-body p-4">
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-secondary">New Username</label>
+                        <input type="text" name="NewUsername" class="form-control" placeholder="Enter new username" value="@Model.Email">
+                    </div>
+
+                    <hr class="text-muted opacity-25">
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-secondary">New Password (Optional)</label>
+                        <input type="password" name="NewPassword" class="form-control" placeholder="Leave blank to keep current">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-secondary">Confirm New Password</label>
+                        <input type="password" name="ConfirmNewPassword" class="form-control" placeholder="Re-enter new password">
+                    </div>
+
+                    <hr class="text-muted opacity-25">
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-danger">Current Password (Required)</label>
+                        <input type="password" name="CurrentPassword" class="form-control" placeholder="Enter current password" required>
+                    </div>
+
+                </div>
+                <div class="modal-footer border-0 pt-0 px-4 pb-4 flex-column flex-md-row">
+                    <button type="button" class="btn btn-light text-secondary w-100 mb-2 mb-md-0" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn text-white fw-bold px-4 w-100" style="background-color: #115e59;">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    body {
+        background-color: #f0f2f5;
+    }
+
+    .table th {
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .table td {
+        border-bottom: 1px solid #f3f4f6;
+        padding-top: 15px;
+        padding-bottom: 15px;
+        font-size: 0.95rem;
+    }
+
+    .form-control:focus {
+        border-color: #115e59;
+        box-shadow: 0 0 0 0.2rem rgba(17, 94, 89, 0.25);
+    }
+
+    /* Default Desktop Sizes */
+    .balance-text {
+        font-size: 3.5rem;
+    }
+
+    .mobile-header-text {
+        font-size: 1.75rem;
+    }
+
+    /* --- MOBILE RESPONSIVENESS FIXES --- */
+    @@media (max-width: 768px) {
+        /* Scales down the main text so it doesn't wrap awkwardly */
+        .mobile-header-text {
+            font-size: 1.3rem !important;
+            white-space: normal !important;
+        }
+        /* Shrinks the balance text so it fits perfectly */
+        .balance-text {
+            font-size: 2.2rem;
+        }
+        /* Prevents table columns from stacking */
+        .text-nowrap {
+            white-space: nowrap !important;
+        }
+        /* Shrinks the table font slightly */
+        .mobile-table td, .mobile-table th {
+            font-size: 0.85rem !important;
+            padding-top: 12px;
+            padding-bottom: 12px;
+        }
+        /* Fullscreen modal for easier mobile typing */
+        .modal-fullscreen-sm-down {
+            margin: 0;
+            height: 100%;
+        }
+
+            .modal-fullscreen-sm-down .modal-content {
+                height: 100%;
+                border-radius: 0 !important;
+            }
+    }
+</style>

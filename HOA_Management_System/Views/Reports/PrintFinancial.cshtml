@@ -1,0 +1,318 @@
+﻿@model HOA_Management_System.Models.ViewModels.ReportsViewModel
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Financial Report</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* BASE STYLES */
+        body {
+            padding: 30px;
+            font-family: sans-serif;
+            color: #333;
+            -webkit-print-color-adjust: exact;
+        }
+
+        .header {
+            border-bottom: 2px solid #0f766e;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: end;
+        }
+
+        /* FIXED METRIC BOX HEIGHTS */
+        .metric-box {
+            border: 1px solid #ccc;
+            padding: 10px;
+            border-radius: 6px;
+            text-align: center;
+            background: #f8f9fa;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .metric-val {
+            font-size: 18px;
+            font-weight: bold;
+            color: #0f766e;
+        }
+
+        .section-header {
+            font-size: 14px;
+            font-weight: bold;
+            margin-top: 25px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #ccc;
+            color: #0f766e;
+            page-break-after: avoid;
+        }
+
+        /* ENHANCED INSIGHT BOX STYLING */
+        .insight-box {
+            background-color: #f8fafc; /* Slightly lighter gray */
+            border-left: 4px solid #0f766e;
+            padding: 12px 15px;
+            font-size: 10px;
+            color: #334155;
+            line-height: 1.6; /* Makes paragraphs much easier to read */
+            margin-top: 12px;
+            page-break-inside: avoid;
+            text-align: justify; /* Gives it a clean, professional report edge */
+        }
+
+        .insight-box strong {
+            color: #0f766e; /* Highlights the exact numbers in teal */
+        }
+
+        .table th {
+            background-color: #eee !important;
+            font-size: 9px;
+            padding: 4px;
+        }
+
+        .table td {
+            font-size: 9px;
+            padding: 4px;
+            vertical-align: middle;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            margin-bottom: 10px;
+            page-break-inside: avoid;
+            border: 1px solid #f0f0f0;
+            padding: 5px;
+        }
+
+        .chart-label {
+            text-align: center;
+            font-size: 10px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        /* PRINT SPECIFIC LAYOUT */
+        @@media print {
+            .no-print {
+                display: none !important;
+            }
+
+            body {
+                padding: 0;
+            }
+
+            .container-fluid {
+                padding: 0;
+            }
+
+            .row-print {
+                display: flex;
+                flex-wrap: nowrap;
+                width: 100%;
+                gap: 10px;
+            }
+
+            .col-print-3 {
+                width: 25%;
+            }
+
+            .col-print-4 {
+                width: 33.33%;
+            }
+
+            .col-print-6 {
+                width: 50%;
+            }
+
+            .col-print-12 {
+                width: 100%;
+            }
+
+            .chart-wrapper canvas {
+                max-height: 160px !important;
+                width: 100% !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print mb-3 p-2 bg-light border rounded d-flex justify-content-between">
+        <span class="small fw-bold">Print Preview</span>
+        <div>
+            <a href="javascript:window.print()" class="btn btn-primary btn-sm py-0">Print Report</a>
+            <a href="javascript:window.close()" class="btn btn-outline-secondary btn-sm py-0">Close</a>
+        </div>
+    </div>
+
+    <div class="header">
+        <div>
+            <h4 class="fw-bold m-0">Financial Analysis Report</h4>
+            <small class="text-secondary">Period: @(Model.FilterType == "Historical" ? "All-Time Historical" : $"{Model.FilterType} {Model.SelectedYear}")</small>
+        </div>
+        <div class="text-end"><small>Generated: @DateTime.Now.ToString("MMM dd, yyyy")</small></div>
+    </div>
+
+    <div class="section-header">1. Executive Summary</div>
+    <div class="row-print d-flex align-items-stretch">
+        <div class="col-print-3 p-1">
+            <div class="metric-box">
+                <small>Total Collected</small>
+                <div class="metric-val">₱@Model.TotalCollected.ToString("N0")</div>
+            </div>
+        </div>
+        <div class="col-print-3 p-1">
+            <div class="metric-box">
+                <small>Outstanding</small>
+                <div class="metric-val text-danger">₱@Model.TotalOutstanding.ToString("N0")</div>
+                <div style="font-size: 8px; color: #6c757d; margin-top: 2px;">out of ₱@Model.TotalExpectedDues.ToString("N0") billed</div>
+            </div>
+        </div>
+        <div class="col-print-3 p-1">
+            <div class="metric-box">
+                <small>Efficiency</small>
+                <div class="metric-val">@Model.EfficiencyRate.ToString("N2")%</div>
+            </div>
+        </div>
+        <div class="col-print-3 p-1">
+            <div class="metric-box">
+                <small>Delinquency</small>
+                <div class="metric-val">@Model.DelinquencyRate.ToString("N2")%</div>
+            </div>
+        </div>
+    </div>
+    <div class="insight-box">@Html.Raw(Model.ExecutiveInsight)</div>
+
+    <div class="section-header">2. Financial Trends</div>
+    <div class="row-print d-flex">
+        <div class="col-print-6">
+            <div class="chart-wrapper">
+                <canvas id="chartColl"></canvas>
+            </div>
+            <div class="chart-label">Collection vs Target</div>
+        </div>
+        <div class="col-print-6">
+            <div class="chart-wrapper">
+                <canvas id="chartProj"></canvas>
+            </div>
+            <div class="chart-label">Projected vs Actual (Cumulative)</div>
+        </div>
+    </div>
+    <div class="insight-box">@Html.Raw(Model.TrendsInsight)</div>
+
+    <div class="section-header">3. Compliance & Revenue Analysis</div>
+    <div class="row-print d-flex">
+        <div class="col-print-4">
+            <div class="chart-wrapper">
+                <canvas id="chartDist"></canvas>
+            </div>
+            <div class="chart-label">Revenue Sources</div>
+        </div>
+        <div class="col-print-4">
+            <div class="chart-wrapper">
+                <canvas id="chartSnap"></canvas>
+            </div>
+            <div class="chart-label">Historical Compliance</div>
+        </div>
+        <div class="col-print-4">
+            <div class="chart-wrapper">
+                <canvas id="chartDelinq"></canvas>
+            </div>
+            <div class="chart-label">Delinquency Rate Trend</div>
+        </div>
+    </div>
+    <div class="insight-box">@Html.Raw(Model.RevenueInsight)</div>
+
+    <div class="section-header">4. Top 10 Worst Offenders (Arrears)</div>
+    <div class="row-print d-flex">
+        <div class="col-print-12">
+            <table class="table table-sm table-bordered mb-0">
+                <thead><tr><th>Homeowner Account</th><th>Block/Lot & Duration</th><th class="text-end">Total Unpaid Debt</th></tr></thead>
+                <tbody>
+                    @foreach (var d in Model.TopDelinquents)
+                    {
+                        <tr>
+                            <td class="fw-bold">@d.Homeowner</td>
+                            <td>@d.BlockLot (@d.MonthsOverdue months)</td>
+                            <td class="text-danger fw-bold text-end">₱@d.TotalDebt.ToString("N0")</td>
+                        </tr>
+                    }
+                    @if (!Model.TopDelinquents.Any())
+                    {
+                        <tr><td colspan="3" class="text-center py-2 text-muted">No overdue accounts found.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="insight-box">@Html.Raw(Model.DetailsInsight)</div>
+
+    <script>
+        Chart.defaults.font.size = 8;
+        Chart.defaults.animation = false;
+        Chart.defaults.responsive = true;
+        Chart.defaults.maintainAspectRatio = false;
+
+        const barColors = @Json.Serialize(Model.BarColors);
+        const snapColors = barColors.map(c => c === '#0f766e' ? '#10b981' : '#e2e8f0');
+        const delinqColors = barColors.map(c => c === '#0f766e' ? '#ef4444' : '#e2e8f0');
+
+        // 1. Collection
+        new Chart(document.getElementById('chartColl'), {
+            type: 'bar',
+            data: {
+                labels: @Json.Serialize(Model.ChartLabels),
+                datasets: [
+                    { label: 'Collected', data: @Json.Serialize(Model.CollectionData), backgroundColor: barColors, barPercentage: 0.6 },
+                    { label: 'Target', data: @Json.Serialize(Model.TargetData), type: 'line', borderColor: '#f59e0b', borderWidth: 1.5, pointRadius: 0 }
+                ]
+            },
+            options: { scales: { y: { beginAtZero: true, ticks: { maxTicksLimit: 5 } }, x: { ticks: { maxRotation: 0 } } } }
+        });
+
+        // 2. Projected
+        new Chart(document.getElementById('chartProj'), {
+            type: 'line',
+            data: {
+                labels: @Json.Serialize(Model.ChartLabels),
+                datasets: [
+                    { label: 'Actual', data: @Json.Serialize(Model.CumulativeActual), borderColor: '#0f766e', borderWidth: 2, pointRadius: 0 },
+                    { label: 'Projected', data: @Json.Serialize(Model.CumulativeProjected), borderColor: '#94a3b8', borderDash: [3,3], borderWidth: 1.5, pointRadius: 0 }
+                ]
+            },
+            options: { scales: { y: { beginAtZero: true, ticks: { maxTicksLimit: 5 } }, x: { ticks: { maxRotation: 0 } } } }
+        });
+
+        // 3. Distribution
+        new Chart(document.getElementById('chartDist'), {
+            type: 'pie',
+            data: { labels: ['Dues', 'Certs', 'Stickers'], datasets: [{ data: [@Model.AmountDues, @Model.AmountCerts, @Model.AmountStickers], backgroundColor: ['#0f766e', '#f59e0b', '#64748b'] }] },
+            options: { plugins: { legend: { position: 'bottom', labels: { boxWidth: 6 } } } }
+        });
+
+        // 4. Snapshot (Historical Compliance)
+        new Chart(document.getElementById('chartSnap'), {
+            type: 'line',
+            data: { labels: @Json.Serialize(Model.ChartLabels), datasets: [{ label: 'Compliance %', data: @Json.Serialize(Model.SnapshotData), borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', fill: true, pointBackgroundColor: snapColors, pointRadius: 2, borderWidth: 1.5 }] },
+            options: { scales: { y: { beginAtZero: true, suggestedMax: 100, ticks: { maxTicksLimit: 4 } }, x: { ticks: { maxRotation: 0 } } }, plugins: { legend: { display: false } } }
+        });
+
+        // 5. Delinquency
+        new Chart(document.getElementById('chartDelinq'), {
+            type: 'line',
+            data: { labels: @Json.Serialize(Model.ChartLabels), datasets: [{ label: 'Rate %', data: @Json.Serialize(Model.DelinquencyData), borderColor: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.1)', fill: true, pointBackgroundColor: delinqColors, pointRadius: 2, borderWidth: 1.5 }] },
+            options: { scales: { y: { beginAtZero: true, ticks: { maxTicksLimit: 4 } }, x: { ticks: { maxRotation: 0 } } }, plugins: { legend: { display: false } } }
+        });
+
+        window.onload = function() { setTimeout(function() { window.print(); }, 800); };
+    </script>
+</body>
+</html>
