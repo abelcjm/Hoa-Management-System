@@ -68,6 +68,7 @@ namespace HOA_Management_System.Controllers
 
         // POST: UpdateProfile
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> UpdateProfile(SettingsIndexViewModel model)
         {
             int userId = GetCurrentUserId();
@@ -103,6 +104,7 @@ namespace HOA_Management_System.Controllers
 
         // POST: ChangePassword
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> ChangePassword(SettingsIndexViewModel model)
         {
             int userId = GetCurrentUserId();
@@ -166,6 +168,7 @@ namespace HOA_Management_System.Controllers
 
         // POST: UpdateSystemSettings (GLOBAL RATE -> Current Month Onwards)
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> UpdateSystemSettings(SettingsIndexViewModel model)
         {
             int userId = GetCurrentUserId();
@@ -196,6 +199,7 @@ namespace HOA_Management_System.Controllers
 
         // POST: GenerateBillingRecords (TARGETED -> Specific Range Only)
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> GenerateBillingRecords(SettingsIndexViewModel model)
         {
             int userId = GetCurrentUserId();

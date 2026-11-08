@@ -1,4 +1,4 @@
-﻿using HOA_Management_System.Filters;
+using HOA_Management_System.Filters;
 using HOA_Management_System.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -7,7 +7,7 @@ using System.IO;
 
 namespace HOA_Management_System.Controllers
 {
-    [UserAuth("Admin", "Encoder")]
+    [UserAuth("Admin")]
     public class BackupController : Controller
     {
         private readonly HoaDbContext _context;
@@ -17,6 +17,16 @@ namespace HOA_Management_System.Controllers
         {
             _context = context;
             _configuration = configuration;
+        }
+
+        private string GetBackupFolder()
+        {
+            var folder = _configuration["BackupSettings:FolderPath"];
+            if (string.IsNullOrWhiteSpace(folder))
+            {
+                folder = Path.Combine(AppContext.BaseDirectory, "HOA_Backups");
+            }
+            return folder;
         }
 
         public async Task<IActionResult> Index()
@@ -41,8 +51,8 @@ namespace HOA_Management_System.Controllers
             // 1. DYNAMICALLY GET DATABASE NAME (Fixes the "HOA_DB does not exist" error)
             string dbName = _context.Database.GetDbConnection().Database;
 
-            // UPDATED BACKUP FOLDER PATH
-            string backupFolder = _configuration["BackupSettings:FolderPath"] ?? @"C:\Users\ako\Downloads\Needed\HOA_Backups";
+            // BACKUP FOLDER PATH
+            string backupFolder = GetBackupFolder();
             string fileName = $"HOA_Backup_{DateTime.Now:yyyyMMdd_HHmmss}.bak";
             string fullPath = Path.Combine(backupFolder, fileName);
 
@@ -117,18 +127,21 @@ namespace HOA_Management_System.Controllers
             var backup = await _context.BackupLogs.FindAsync(id);
             if (backup == null) return NotFound();
 
-            // UPDATED BACKUP FOLDER PATH
-            string folder = _configuration["BackupSettings:FolderPath"] ?? @"C:\Users\ako\Downloads\Needed\HOA_Backups";
-            string fullPath = Path.Combine(folder, backup.Backup_File_Name);
+            string folder = GetBackupFolder();
+            string safeFileName = Path.GetFileName(backup.Backup_File_Name);
+            string fullPath = Path.Combine(folder, safeFileName);
+            string resolvedPath = Path.GetFullPath(fullPath);
+            string resolvedFolder = Path.GetFullPath(folder);
 
-            if (!System.IO.File.Exists(fullPath))
+            // Prevent path traversal outside the backup folder
+            if (!resolvedPath.StartsWith(resolvedFolder, StringComparison.OrdinalIgnoreCase) || !System.IO.File.Exists(resolvedPath))
             {
                 TempData["Error"] = "Physical backup file not found. It may have been deleted.";
                 return RedirectToAction("Index");
             }
 
-            var fileBytes = await System.IO.File.ReadAllBytesAsync(fullPath);
-            return File(fileBytes, "application/octet-stream", backup.Backup_File_Name);
+            var fileBytes = await System.IO.File.ReadAllBytesAsync(resolvedPath);
+            return File(fileBytes, "application/octet-stream", safeFileName);
         }
 
         // 2. RESTORE ACTION (Handle with Care!)
@@ -140,13 +153,19 @@ namespace HOA_Management_System.Controllers
             string dbName = _context.Database.GetDbConnection().Database;
             string restoreFilePath = "";
 
-            // UPDATED BACKUP FOLDER PATH
-            string backupFolder = _configuration["BackupSettings:FolderPath"] ?? @"C:\Users\ako\Downloads\Needed\HOA_Backups";
+            string backupFolder = GetBackupFolder();
 
             try
             {
                 if (backupFile != null && backupFile.Length > 0)
                 {
+                    string ext = Path.GetExtension(backupFile.FileName);
+                    if (!string.Equals(ext, ".bak", StringComparison.OrdinalIgnoreCase))
+                    {
+                        TempData["Error"] = "Invalid file type. Only .bak files are accepted.";
+                        return RedirectToAction("Index");
+                    }
+
                     string tempFolder = Path.Combine(backupFolder, "Temp");
                     if (!Directory.Exists(tempFolder)) Directory.CreateDirectory(tempFolder);
 
@@ -162,7 +181,8 @@ namespace HOA_Management_System.Controllers
                     var existingBackup = await _context.BackupLogs.FindAsync(backupId);
                     if (existingBackup == null) return NotFound();
 
-                    restoreFilePath = Path.Combine(backupFolder, existingBackup.Backup_File_Name);
+                    string safeFileName = Path.GetFileName(existingBackup.Backup_File_Name);
+                    restoreFilePath = Path.Combine(backupFolder, safeFileName);
                 }
                 else
                 {

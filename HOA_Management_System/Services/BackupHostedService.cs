@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
@@ -64,7 +64,7 @@ namespace HOA_Management_System.Services
                     await context.Database.CloseConnectionAsync();
 
                     // --- ALIGNED FOLDER PATH HERE ---
-                    string backupFolder = _configuration["BackupSettings:FolderPath"] ?? @"C:\Users\ako\Downloads\Needed\HOA_Backups";
+                    string backupFolder = _configuration["BackupSettings:FolderPath"] ?? Path.Combine(AppContext.BaseDirectory, "HOA_Backups");
 
                     if (!Directory.Exists(backupFolder)) Directory.CreateDirectory(backupFolder);
 

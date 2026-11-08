@@ -1,4 +1,5 @@
-﻿using HOA_Management_System.Models;
+using HOA_Management_System.Filters;
+using HOA_Management_System.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -8,6 +9,7 @@ using System.Threading.Tasks;
 
 namespace HOA_Management_System.Controllers
 {
+    [UserAuth("Admin")]
     public class DummyDataController : Controller
     {
         private readonly HoaDbContext _context;
@@ -42,7 +44,7 @@ namespace HOA_Management_System.Controllers
             var adminUser = await _context.UserAccounts.FirstOrDefaultAsync(u => u.Role == "Admin");
             if (adminUser == null)
             {
-                adminUser = new UserAccount { Username = "admin_dummy", PasswordHash = "dummy", Role = "Admin", IsActive = true, Status = "Active" };
+                adminUser = new UserAccount { Username = "admin_dummy", PasswordHash = BCrypt.Net.BCrypt.HashPassword("dummy"), Role = "Admin", IsActive = true, Status = "Active" };
                 _context.UserAccounts.Add(adminUser);
                 await _context.SaveChangesAsync();
             }
