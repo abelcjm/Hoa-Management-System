@@ -414,6 +414,8 @@ FodyWeavers.xsd
 appsettings.json
 appsettings.Development.json
 appsettings.*.json
+!appsettings.example.json
+!appsettings.Example.json
 
 # If you have an SQLite database file locally, ignore it too
 *.db
